@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Visitas – Toyo Foods</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 12px;
+    color: #222;
+    font-size: 19px;
+  }
+  .card {
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #0046BE;
+  }
+  label {
+    font-weight: bold;
+    margin-top: 12px;
+    display: block;
+    font-size: 18px;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 14px;
+    margin-top: 6px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: 1px solid #bbb;
+    background: #fff;
+  }
+  textarea {
+    height: 100px;
+  }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 20px;
+    margin-top: 16px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .btn-gps { background: #007bff; color: #fff; }
+  .btn-guardar { background: #ff9800; color: #fff; }
+  .btn-correo { background: #28a745; color: #fff; }
+  .btn-borrar { background: #f44336; color: #fff; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  th {
+    background: #e5efff;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Registro de Visita</h1>
+
+  <label>Fecha</label>
+  <input type="date" id="fecha">
+
+  <label>Hora</label>
+  <input type="time" id="hora">
+
+  <label>Vendedor</label>
+  <select id="vendedor">
+    <option value="">Selecciona</option>
+    <option>Héctor Beristain</option>
+    <option>Vendedor 1</option>
+    <option>Vendedor 2</option>
+  </select>
+
+  <label>Cliente</label>
+  <select id="cliente">
+    <option value="">Selecciona</option>
+    <option>Cliente A</option>
+    <option>Cliente B</option>
+  </select>
+
+  <label>Monto vendido (MXN)</label>
+  <input id="monto" type="number" step="0.01">
+
+  <label>Notas</label>
+  <textarea id="nota"></textarea>
+
+  <button class="btn btn-gps" onclick="obtenerGPS()">📍 Tomar ubicación</button>
+
+  <label>Latitud</label>
+  <input id="latitud" readonly>
+
+  <label>Longitud</label>
+  <input id="longitud" readonly>
+
+  <label>Mapa</label>
+  <input id="mapa" readonly>
+
+  <button class="btn btn-guardar" onclick="guardarVisita()">💾 Guardar visita</button>
+
+  <button class="btn btn-correo" onclick="enviarCorreo()">✉️ Enviar correo</button>
+</div>
+
+<div class="card">
+  <h1>Historial</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th><th>Hora</th><th>Cliente</th><th>Monto</th><th>Mapa</th>
+      </tr>
+    </thead>
+    <tbody id="historial"></tbody>
+  </table>
+
+  <button class="btn btn-borrar" onclick="borrarHistorial()">🗑️ Borrar historial</button>
+</div>
+
+<script>
+const STORAGE_KEY = "visitasTF";
+
+// FECHA Y HORA AUTOMÁTICA
+window.onload = () => {
+  const f = new Date();
+  document.getElementById("fecha").value = f.toISOString().slice(0,10);
+  document.getElementById("hora").value = f.toTimeString().slice(0,5);
+  renderHistorial();
+};
+
+// GPS FUNCIONAL PARA ANDROID + IOS
+function obtenerGPS() {
+  if (!navigator.geolocation) {
+    alert("El GPS no es soportado en este dispositivo.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lon = pos.coords.longitude.toFixed(6);
+
+      document.getElementById("latitud").value = lat;
+      document.getElementById("longitud").value = lon;
+      document.getElementById("mapa").value = `https://www.google.com/maps?q=${lat},${lon}`;
+    },
+    err => {
+      alert("No se pudo obtener la ubicación. Revisa permisos de GPS.");
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+// GUARDAR VISITA
+function guardarVisita() {
+  const visita = {
+    fecha: fecha.value,
+    hora: hora.value,
+    vendedor: vendedor.value,
+    cliente: cliente.value,
+    monto: monto.value,
+    nota: nota.value,
+    lat: latitud.value,
+    lon: longitud.value,
+    mapa: mapa.value
+  };
+
+  let visitas = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  visitas.push(visita);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(visitas));
+
+  renderHistorial();
+  alert("Visita guardada");
+}
+
+// MOSTRAR HISTORIAL
+function renderHistorial() {
+  let visitas = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  let html = "";
+
+  visitas.forEach(v => {
+    html += `
+      <tr>
+        <td>${v.fecha}</td>
+        <td>${v.hora}</td>
+        <td>${v.cliente}</td>
+        <td>$${v.monto}</td>
+        <td><a href="${v.mapa}" target="_blank">Mapa</a></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("historial").innerHTML = html;
+}
+
+// BORRAR HISTORIAL
+function borrarHistorial() {
+  if (confirm("¿Seguro que quieres borrar TODO?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    renderHistorial();
+  }
+}
+
+// ENVIAR CORREO DIRECTO
+function enviarCorreo() {
+  const visitas = JSON.stringify(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"), null, 2);
+  const body = encodeURIComponent(visitas);
+
+  window.location.href = `mailto:hberistain@toyofoods.com.mx?subject=Reporte de visitas&body=${body}`;
+}
+</script>
+
+</body>
+</html>
