@@ -1,7 +1,8 @@
 {
-"toyo-visitas-v10",
-"short_name": "ToyoVisitas",
+  "name": "Toyo - Visitas",
+  "short_name": "ToyoVisitas",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#F3F5F8",
   "theme_color": "#0046BE",
