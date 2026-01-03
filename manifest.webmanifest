@@ -1,5 +1,5 @@
 {
-"toyo-visitas-v2";
+"toyo-visitas-v1",
 "short_name": "ToyoVisitas",
   "start_url": "./",
   "display": "standalone",
