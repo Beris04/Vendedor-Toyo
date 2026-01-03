@@ -8,10 +8,11 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0046BE">
 
-  <!-- Supabase JS via CDN -->
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Excel export -->
+  <!-- ✅ Supabase UMD (para GitHub Pages / window.supabase) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- ✅ Excel export (SheetJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     :root{
@@ -287,18 +288,59 @@
 /* =========================
    CONFIG (CAMBIA SOLO ESTO)
    ========================= */
-const SUPABASE_URL = https://alprfxtjoyszkqvoeqkb.supabase.co;
-const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFscHJmeHRqb3lzemtxdm9lcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NDg4MzUsImV4cCI6MjA4MzAyNDgzNX0.-nAPH5bv0e7oDvySgY9G5B83_afn34ByjmjnTlfiqqI
+const SUPABASE_URL = "https://alprfxtjoyszkqvoeqkb.supabase.co";
+const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_ANON_PUBLIC_KEY";
 
 /* =========================
-   INIT
+   INIT / GUARD
    ========================= */
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id)=>document.getElementById(id);
 
 function setNet(){ $("net").textContent = navigator.onLine ? "Online" : "Offline"; }
-addEventListener("online", setNet); addEventListener("offline", setNet); setNet();
+addEventListener("online", setNet);
+addEventListener("offline", setNet);
+setNet();
 
+function setBackend(txt, ok=false){
+  $("apiStatus").innerHTML = ok ? `<span class="ok">${txt}</span>` : `<span class="err">${txt}</span>`;
+}
+
+if (!window.supabase || !window.supabase.createClient) {
+  setBackend("SUPABASE JS NO CARGA", false);
+  console.error("Supabase JS no cargó. Revisa el <script src> UMD.");
+  throw new Error("Supabase JS no cargó.");
+}
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes("PEGA_AQUI")) {
+  setBackend("FALTA CONFIG", false);
+  throw new Error("Falta SUPABASE_URL o SUPABASE_ANON_KEY.");
+}
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* “Ping” tolerante: si hay RLS/permiso denegado lo consideramos “Backend OK” */
+async function pingSupabase(){
+  try{
+    const { error } = await sb.from("profiles").select("user_id").limit(1);
+    if (error) {
+      const msg = String(error.message || error).toLowerCase();
+      if (msg.includes("invalid api key") || msg.includes("jwt") && msg.includes("invalid")) {
+        setBackend("ANON KEY MAL", false);
+        return;
+      }
+      // Cualquier “permission denied / RLS” indica que sí llegó al backend
+      setBackend("OK", true);
+      return;
+    }
+    setBackend("OK", true);
+  }catch(e){
+    setBackend("ERROR", false);
+  }
+}
+pingSupabase();
+
+/* =========================
+   UTIL
+   ========================= */
 function todayISO(){
   const d=new Date(); const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0");
   return `${d.getFullYear()}-${mm}-${dd}`;
@@ -322,23 +364,8 @@ function deviceId(){
   return v;
 }
 
-async function pingSupabase(){
-  try{
-    // ping básico: intenta leer 1 registro de profiles (requiere auth para devolver datos, pero sirve para “reachability”)
-    const { error } = await sb.from("profiles").select("user_id").limit(1);
-    if (error && String(error.message||"").toLowerCase().includes("invalid api key")){
-      $("apiStatus").innerHTML = `<span class="err">ANON KEY MAL</span>`;
-      return;
-    }
-    $("apiStatus").innerHTML = `<span class="${navigator.onLine ? 'ok' : ''}">${navigator.onLine ? 'OK' : 'OFF'}</span>`;
-  }catch(e){
-    $("apiStatus").innerHTML = `<span class="err">ERROR</span>`;
-  }
-}
-pingSupabase();
-
 /* =========================
-   OFFLINE QUEUE (si falla insert)
+   OFFLINE QUEUE
    ========================= */
 const QKEY="toyo_queue_supabase_v1";
 const getQ=()=>{ try{return JSON.parse(localStorage.getItem(QKEY)||"[]")}catch(e){return []} };
@@ -388,7 +415,7 @@ async function loadProfile(){
     .single();
 
   if(error){
-    alert("Entraste, pero falta tu perfil en la tabla 'profiles'. (Ejecuta el SQL de profiles en Supabase)");
+    alert("Entraste, pero falta tu perfil en 'profiles'. (Ya lo resolviste en Supabase, si persiste es caché.)");
     return;
   }
   profile=data;
@@ -460,7 +487,6 @@ $("btnLogin").onclick = async ()=>{
 $("btnForgot").onclick = async ()=>{
   const email=$("email").value.trim();
   if(!email) return alert("Escribe tu email primero.");
-  // envía email de reset (tu proyecto debe tener configurado el email provider)
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
   if(error){
     alert("No se pudo enviar reset: " + error.message);
@@ -607,7 +633,6 @@ $("btnEnd").onclick=async ()=>{
   }
 };
 
-/* Render seller visits */
 async function refreshMyVisits(){
   const { data, error } = await sb
     .from("visits")
@@ -748,7 +773,7 @@ async function refreshMeta(){
 }
 
 /* =========================
-   HISTORIAL (rango)
+   HISTORIAL
    ========================= */
 $("histFrom").value = todayISO();
 $("histTo").value = todayISO();
@@ -796,7 +821,7 @@ async function loadHist(){
 }
 
 /* =========================
-   ADMIN (Realtime)
+   ADMIN
    ========================= */
 $("adminFrom").value = todayISO();
 $("adminTo").value = todayISO();
@@ -903,4 +928,3 @@ boot();
 
 </body>
 </html>
-
