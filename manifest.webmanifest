@@ -1,0 +1,9 @@
+{
+  "name": "Toyo – Visitas",
+  "short_name": "ToyoVisitas",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F3F5F8",
+  "theme_color": "#0046BE",
+  "icons": []
+}
