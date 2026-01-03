@@ -1,4 +1,4 @@
-const CACHE = "toyo-visitas-v7";
+const CACHE = "toyo-visitas-v10";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
