@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Toyo – Visitas</title>
+
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0046BE">
+
+  <!-- Supabase JS via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --blue:#0046BE; --navy:#002E80;
+      --bg:#F3F5F8; --card:#fff; --border:#d9dde6;
+      --text:#0f172a; --muted:#64748b;
+      --danger:#dc2626;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+    .brand b{color:var(--blue);font-size:16px}
+    .brand div{color:var(--muted);font-size:12px;margin-top:2px}
+    .pill{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 10px;font-size:12px;color:var(--muted);font-weight:800}
+    .pill b{color:var(--text)}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{border:1px solid var(--border);background:#fff;padding:10px 12px;border-radius:12px;font-weight:900;cursor:pointer;user-select:none}
+    .tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 6px 18px rgba(15,23,42,.06);margin-bottom:12px}
+    .grid{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:900px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
+    label{display:block;font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px}
+    input,select,textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:15px;background:#fff;outline:none}
+    textarea{min-height:90px;resize:vertical}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;padding:12px 14px;font-weight:900;cursor:pointer}
+    .btn.primary{background:var(--blue);color:#fff}
+    .btn.dark{background:var(--navy);color:#fff}
+    .btn.ghost{background:#fff;border:1px solid var(--border)}
+    .btn.danger{background:var(--danger);color:#fff}
+    .mini{font-size:12px;color:var(--muted)}
+    .hide{display:none !important}
+    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
+    th,td{padding:10px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+    th{background:#f8fafc;text-align:left;color:var(--muted);font-weight:900}
+    tr:last-child td{border-bottom:0}
+    .right{text-align:right}
+    .progress{height:12px;background:#e8edf6;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .bar{height:100%;width:0%;background:var(--blue)}
+    .notice{padding:10px 12px;border-radius:12px;border:1px dashed var(--border);background:#fff;color:var(--muted);font-size:12px;line-height:1.35}
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <div class="brand">
+      <b>Toyo – Seguimiento</b>
+      <div id="who">No has iniciado sesión</div>
+    </div>
+    <div class="row">
+      <span class="pill">Red: <b id="net">—</b></span>
+      <button class="btn ghost hide" id="btnLogout">Salir</button>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <section id="view_login">
+    <div class="card">
+      <b>Iniciar sesión</b>
+      <div class="mini" style="margin:6px 0 12px;">Cada vendedor usa su usuario. Admin ve todo.</div>
+      <div class="grid two">
+        <div>
+          <label>Email</label>
+          <input id="email" placeholder="vendedor@toyofoods.com.mx" autocomplete="username" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn dark" id="btnLogin">Entrar</button>
+      </div>
+      <div class="notice" style="margin-top:12px;">
+        <b>Importante:</b> El vendedor ya no “elige” vendedor. Queda ligado al login.
+      </div>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="view_app" class="hide">
+    <div class="tabs" id="tabs"></div>
+
+    <!-- VISITA -->
+    <section id="view_visita" class="hide">
+      <div class="card">
+        <div class="grid two">
+          <div>
+            <label>Cliente visitado</label>
+            <input id="client" placeholder="Ej. Sushi Factory / HEB..." list="clientsList" />
+            <datalist id="clientsList"></datalist>
+            <div class="mini">Puedes escribir libre o elegir sugerencia (si cargas clientes).</div>
+          </div>
+          <div>
+            <label>Motivo</label>
+            <select id="reason">
+              <option value="">Selecciona…</option>
+              <option>Entrega de producto</option>
+              <option>Cobranza</option>
+              <option>Negociación</option>
+              <option>Degustación</option>
+              <option>Cotización</option>
+              <option>Visita de seguimiento</option>
+              <option>Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>Comentarios</label>
+          <textarea id="comments" placeholder="Acuerdos, pendientes, observaciones…"></textarea>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnStart">▶ Iniciar (GPS)</button>
+          <button class="btn danger" id="btnEnd" disabled>■ Terminar (GPS + Guardar)</button>
+          <button class="btn ghost" id="btnClear">Limpiar</button>
+          <button class="btn ghost" id="btnFlush">Reintentar envío</button>
+        </div>
+
+        <div class="grid two" style="margin-top:12px;">
+          <div class="pill">Inicio: <b id="startInfo">—</b></div>
+          <div class="pill">Duración: <b id="durInfo">—</b></div>
+        </div>
+
+        <div class="notice" style="margin-top:12px;">
+          Se guarda hora servidor (<b>created_at</b>) + inicio/fin + GPS inicio/fin.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <b>Últimas visitas (tuyas)</b>
+          <button class="btn ghost" id="btnMyExcel">⬇ Excel</button>
+        </div>
+        <div id="myVisits" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <!-- META -->
+    <section id="view_meta" class="hide">
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Mes</label>
+            <input id="goalMonth" type="month" />
+          </div>
+          <div>
+            <label>Meta del mes (MXN)</label>
+            <input id="goalVal" type="number" inputmode="decimal" placeholder="Ej. 500000" />
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn dark" id="btnSaveGoal">Guardar meta</button>
+            <button class="btn ghost" id="btnRefreshMeta">Actualizar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Fecha</label>
+            <input id="saleDate" type="date" />
+          </div>
+          <div>
+            <label>Venta del día (MXN)</label>
+            <input id="saleAmt" type="number" inputmode="decimal" placeholder="Ej. 25000" />
+          </div>
+          <div>
+            <label>Nota (opcional)</label>
+            <input id="saleNote" placeholder="Ej. pedido grande / promo..." />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnSaveSale">Guardar venta</button>
+          <button class="btn ghost" id="btnSalesExcel">⬇ Excel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <b>Progreso del mes</b>
+        <div class="mini" id="metaSummary" style="margin:6px 0 10px;">—</div>
+        <div class="progress"><div class="bar" id="metaBar"></div></div>
+        <div id="salesTable" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="view_hist" class="hide">
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Desde</label>
+            <input id="histFrom" type="date" />
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input id="histTo" type="date" />
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn primary" id="btnLoadHist">Cargar</button>
+            <button class="btn ghost" id="btnHistExcel">⬇ Excel</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <b>Visitas</b>
+        <div id="histTable" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="view_admin" class="hide">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <b>Admin – Visitas (tiempo real)</b>
+          <div class="row">
+            <button class="btn ghost" id="btnAdminReload">🔄 Recargar</button>
+            <button class="btn ghost" id="btnAdminExcel">⬇ Excel</button>
+          </div>
+        </div>
+
+        <div class="grid three" style="margin-top:10px;">
+          <div>
+            <label>Desde</label>
+            <input id="adminFrom" type="date" />
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input id="adminTo" type="date" />
+          </div>
+          <div>
+            <label>Motivo (opcional)</label>
+            <select id="adminReason">
+              <option value="">Todos</option>
+              <option>Entrega de producto</option>
+              <option>Cobranza</option>
+              <option>Negociación</option>
+              <option>Degustación</option>
+              <option>Cotización</option>
+              <option>Visita de seguimiento</option>
+              <option>Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid three" style="margin-top:10px;">
+          <span class="pill">Registros: <b id="kCount">—</b></span>
+          <span class="pill">Prom. duración: <b id="kAvg">—</b></span>
+          <span class="pill">Última: <b id="kLast">—</b></span>
+        </div>
+
+        <div id="adminTable" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+  </section>
+
+<script>
+/* =========================
+   CONFIG (CAMBIA ESTO)
+   ========================= */
+const SUPABASE_URL = "PEGA_TU_SUPABASE_URL_AQUI";
+const SUPABASE_ANON_KEY = "PEGA_TU_SUPABASE_ANON_KEY_AQUI";
+
+/* =========================
+   INIT
+   ========================= */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id)=>document.getElementById(id);
+
+function setNet(){ $("net").textContent = navigator.onLine ? "Online" : "Offline"; }
+addEventListener("online", setNet); addEventListener("offline", setNet); setNet();
+
+function todayISO(){
+  const d=new Date(); const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+function monthISO(){
+  const d=new Date(); const mm=String(d.getMonth()+1).padStart(2,"0");
+  return `${d.getFullYear()}-${mm}`;
+}
+function fmtDT(v){ try{return new Date(v).toLocaleString("es-MX")}catch(e){return String(v||"")} }
+function fmtNum(n){ return Number(n||0).toLocaleString("es-MX",{maximumFractionDigits:2}); }
+function exportExcel(name, rows){
+  const ws = XLSX.utils.json_to_sheet(rows || []);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Datos");
+  XLSX.writeFile(wb, `${name}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function deviceId(){
+  const k="toyo_device_id_v2";
+  let v=localStorage.getItem(k);
+  if(!v){ v="DEV-"+Math.random().toString(16).slice(2)+"-"+Date.now().toString(16); localStorage.setItem(k,v); }
+  return v;
+}
+
+/* =========================
+   OFFLINE QUEUE (si falla insert)
+   ========================= */
+const QKEY="toyo_queue_supabase_v1";
+const getQ=()=>{ try{return JSON.parse(localStorage.getItem(QKEY)||"[]")}catch(e){return []} };
+const setQ=(q)=>localStorage.setItem(QKEY, JSON.stringify(q));
+function pushQ(item){ const q=getQ(); q.unshift(item); setQ(q); }
+async function flushQ(){
+  if(!navigator.onLine) return alert("Sin internet.");
+  let q=getQ();
+  if(!q.length) return alert("No hay pendientes.");
+  const remaining=[];
+  for(const item of q){
+    try{
+      if(item.type==="visit"){
+        const { error } = await sb.from("visits").insert(item.payload);
+        if(error) throw error;
+      }
+      if(item.type==="goal"){
+        const { error } = await sb.from("monthly_goals").upsert(item.payload, { onConflict:"seller_id,month" });
+        if(error) throw error;
+      }
+      if(item.type==="sale"){
+        const { error } = await sb.from("daily_sales").upsert(item.payload, { onConflict:"seller_id,sale_date" });
+        if(error) throw error;
+      }
+    }catch(e){
+      remaining.push(item);
+    }
+  }
+  setQ(remaining);
+  alert("Pendientes: " + remaining.length);
+}
+
+/* =========================
+   AUTH + PROFILE
+   ========================= */
+let user=null, profile=null, role=null;
+
+async function loadProfile(){
+  const { data: { user: u } } = await sb.auth.getUser();
+  user=u;
+  if(!user) return;
+
+  const { data, error } = await sb
+    .from("profiles")
+    .select("user_id, role, display_name")
+    .eq("user_id", user.id)
+    .single();
+
+  if(error){ alert("Falta profile para este usuario (tabla profiles)."); return; }
+  profile=data;
+  role=data.role;
+}
+
+function showLogin(){
+  $("view_login").classList.remove("hide");
+  $("view_app").classList.add("hide");
+  $("who").textContent = "No has iniciado sesión";
+  $("btnLogout").classList.add("hide");
+}
+function showApp(){
+  $("view_login").classList.add("hide");
+  $("view_app").classList.remove("hide");
+  $("who").textContent = `${profile.display_name} (${role})`;
+  $("btnLogout").classList.remove("hide");
+}
+
+function setTabs(){
+  const tabs = [];
+  tabs.push({id:"visita", label:"🧭 Visita"});
+  tabs.push({id:"meta", label:"🎯 Meta"});
+  tabs.push({id:"hist", label:"📆 Historial"});
+  if(role==="admin") tabs.push({id:"admin", label:"🔒 Admin"});
+
+  $("tabs").innerHTML = "";
+  for(const t of tabs){
+    const el=document.createElement("div");
+    el.className="tab";
+    el.textContent=t.label;
+    el.onclick=()=>openTab(t.id);
+    $("tabs").appendChild(el);
+  }
+  openTab("visita");
+}
+function openTab(id){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  [...$("tabs").children].forEach(x=>{
+    const tx=x.textContent;
+    if((tx.includes("Visita") && id==="visita") ||
+       (tx.includes("Meta") && id==="meta") ||
+       (tx.includes("Historial") && id==="hist") ||
+       (tx.includes("Admin") && id==="admin")){
+      x.classList.add("active");
+    }
+  });
+
+  ["visita","meta","hist","admin"].forEach(v=>{
+    const sec=$("view_"+v);
+    if(!sec) return;
+    sec.classList.toggle("hide", v!==id);
+  });
+
+  if(id==="visita") refreshMyVisits();
+  if(id==="meta") refreshMeta();
+  if(id==="admin" && role==="admin") adminReload();
+}
+
+/* LOGIN */
+$("btnLogin").onclick = async ()=>{
+  const email=$("email").value.trim();
+  const pass=$("pass").value;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){ alert(error.message); return; }
+  await boot();
+};
+$("btnLogout").onclick = async ()=>{
+  await sb.auth.signOut();
+  showLogin();
+};
+
+/* =========================
+   CLIENT SUGGESTIONS (opcional)
+   ========================= */
+async function loadClients(){
+  try{
+    const { data, error } = await sb
+      .from("clients")
+      .select("name")
+      .eq("active", true)
+      .order("name", { ascending:true })
+      .limit(300);
+
+    if(error) throw error;
+    const dl=$("clientsList"); dl.innerHTML="";
+    (data||[]).forEach(c=>{
+      const op=document.createElement("option");
+      op.value=c.name;
+      dl.appendChild(op);
+    });
+  }catch(e){
+    // si no usas tabla clients, no pasa nada
+  }
+}
+
+/* =========================
+   VISIT FLOW
+   ========================= */
+let current=null, timer=null;
+
+function getGeo(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation) return reject(new Error("Sin geolocalización"));
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
+      e=>reject(new Error(e.message||"Error GPS")),
+      { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
+    );
+  });
+}
+function clearVisit(){
+  current=null;
+  $("startInfo").textContent="—";
+  $("durInfo").textContent="—";
+  $("btnStart").disabled=false;
+  $("btnEnd").disabled=true;
+  if(timer){ clearInterval(timer); timer=null; }
+}
+
+$("btnClear").onclick=()=>{
+  $("client").value=""; $("reason").value=""; $("comments").value="";
+  clearVisit();
+};
+$("btnFlush").onclick=flushQ;
+
+$("btnStart").onclick=async ()=>{
+  const client=$("client").value.trim();
+  const reason=$("reason").value.trim();
+  if(!client) return alert("Escribe el cliente.");
+  if(!reason) return alert("Selecciona el motivo.");
+
+  try{
+    $("btnStart").disabled=true;
+    const g=await getGeo();
+    const start=new Date();
+    current={
+      seller_id:user.id,
+      seller_name:profile.display_name,
+      client_name:client,
+      reason,
+      comments:$("comments").value.trim(),
+      start_ts:start.toISOString(),
+      start_ms:Date.now(),
+      start_lat:g.lat, start_lng:g.lng, start_acc:g.acc,
+      device_id:deviceId()
+    };
+    $("startInfo").textContent = `${fmtDT(current.start_ts)} | ±${Math.round(g.acc)}m`;
+    $("btnEnd").disabled=false;
+
+    timer=setInterval(()=>{
+      if(!current) return;
+      const min=Math.max(0, Math.round((Date.now()-current.start_ms)/60000));
+      $("durInfo").textContent = `${min} min`;
+    },1000);
+
+  }catch(e){
+    $("btnStart").disabled=false;
+    alert(e.message);
+  }
+};
+
+$("btnEnd").onclick=async ()=>{
+  if(!current) return;
+  try{
+    $("btnEnd").disabled=true;
+    const g=await getGeo();
+    const end=new Date();
+    const duration_min=Math.max(0, Math.round((Date.now()-current.start_ms)/60000));
+
+    const payload={
+      seller_id: current.seller_id,
+      seller_name: current.seller_name,
+      client_name: current.client_name,
+      reason: current.reason,
+      comments: current.comments,
+      start_ts: current.start_ts,
+      end_ts: end.toISOString(),
+      duration_min,
+      start_lat: current.start_lat,
+      start_lng: current.start_lng,
+      start_acc: current.start_acc,
+      end_lat: g.lat,
+      end_lng: g.lng,
+      end_acc: g.acc,
+      device_id: current.device_id
+    };
+
+    const { error } = await sb.from("visits").insert(payload);
+    if(error){
+      pushQ({type:"visit", payload});
+      alert("Guardada local (pendiente de envío).");
+    }else{
+      alert("✅ Visita guardada.");
+    }
+
+    clearVisit();
+    refreshMyVisits();
+
+  }catch(e){
+    alert(e.message);
+    $("btnEnd").disabled=false;
+  }
+};
+
+/* Render seller visits */
+async function refreshMyVisits(){
+  const { data, error } = await sb
+    .from("visits")
+    .select("id, created_at, client_name, reason, duration_min, start_ts, end_ts, end_lat, end_lng")
+    .eq("seller_id", user.id)
+    .order("created_at", { ascending:false })
+    .limit(15);
+
+  if(error){
+    $("myVisits").innerHTML = `<div class="mini">No se pudo cargar: ${error.message}</div>`;
+    return;
+  }
+
+  if(!data?.length){
+    $("myVisits").innerHTML = `<div class="mini">Sin visitas.</div>`;
+    return;
+  }
+
+  window.__myVisits = data;
+
+  let html=`<table><thead><tr>
+    <th>Fecha</th><th>Cliente</th><th>Motivo</th><th class="right">Dur</th><th>Mapa</th>
+  </tr></thead><tbody>`;
+
+  data.forEach(r=>{
+    const map = (r.end_lat && r.end_lng) ? `https://www.google.com/maps?q=${r.end_lat},${r.end_lng}` : "";
+    html += `<tr>
+      <td>${fmtDT(r.created_at)}</td>
+      <td>${r.client_name}</td>
+      <td>${r.reason}</td>
+      <td class="right">${r.duration_min}</td>
+      <td>${map ? `<a href="${map}" target="_blank" rel="noopener">Ver</a>` : "—"}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  $("myVisits").innerHTML = html;
+}
+
+$("btnMyExcel").onclick=()=> exportExcel("Mis_Visitas", window.__myVisits || []);
+
+/* =========================
+   META
+   ========================= */
+function monthToDate(m){ return `${m}-01`; }
+
+$("goalMonth").value = monthISO();
+$("saleDate").value = todayISO();
+
+$("btnSaveGoal").onclick = async ()=>{
+  const m=$("goalMonth").value;
+  const goal=Number($("goalVal").value||0);
+  if(!m) return alert("Selecciona mes.");
+  if(goal<=0) return alert("Meta > 0.");
+
+  const payload = { seller_id:user.id, month: monthToDate(m), goal, updated_at: new Date().toISOString() };
+  const { error } = await sb.from("monthly_goals").upsert(payload, { onConflict:"seller_id,month" });
+  if(error){
+    pushQ({type:"goal", payload});
+    alert("Meta guardada local (pendiente).");
+  }else{
+    alert("✅ Meta guardada.");
+  }
+  refreshMeta();
+};
+
+$("btnSaveSale").onclick = async ()=>{
+  const d=$("saleDate").value;
+  const amt=Number($("saleAmt").value||0);
+  const note=$("saleNote").value.trim();
+  if(!d) return alert("Selecciona fecha.");
+
+  const payload = { seller_id:user.id, sale_date:d, amount:amt, note };
+  const { error } = await sb.from("daily_sales").upsert(payload, { onConflict:"seller_id,sale_date" });
+  if(error){
+    pushQ({type:"sale", payload});
+    alert("Venta guardada local (pendiente).");
+  }else{
+    alert("✅ Venta guardada.");
+  }
+  $("saleAmt").value=""; $("saleNote").value="";
+  refreshMeta();
+};
+
+$("btnRefreshMeta").onclick=refreshMeta;
+$("btnSalesExcel").onclick=()=> exportExcel("Ventas_Diarias", window.__salesRows || []);
+
+async function refreshMeta(){
+  const m=$("goalMonth").value || monthISO();
+  const monthDate = monthToDate(m);
+
+  const { data: g, error: ge } = await sb
+    .from("monthly_goals")
+    .select("goal")
+    .eq("seller_id", user.id)
+    .eq("month", monthDate)
+    .maybeSingle();
+
+  if(ge){ $("metaSummary").textContent = ge.message; return; }
+  if(g?.goal) $("goalVal").value = g.goal;
+
+  const start = monthDate;
+  const endD = new Date(monthDate); endD.setMonth(endD.getMonth()+1);
+  const end = endD.toISOString().slice(0,10);
+
+  const { data: s, error: se } = await sb
+    .from("daily_sales")
+    .select("sale_date, amount, note")
+    .eq("seller_id", user.id)
+    .gte("sale_date", start)
+    .lt("sale_date", end)
+    .order("sale_date", {ascending:true});
+
+  if(se){ $("metaSummary").textContent = se.message; return; }
+  window.__salesRows = s || [];
+
+  const sum = (s||[]).reduce((a,r)=>a+Number(r.amount||0),0);
+  const goal = Number(g?.goal||0);
+  const pct = goal>0 ? Math.min(100, (sum/goal)*100) : 0;
+  const falt = goal>0 ? Math.max(0, goal-sum) : 0;
+
+  $("metaSummary").innerHTML = goal>0
+    ? `Vendido: <b>$${fmtNum(sum)}</b> de <b>$${fmtNum(goal)}</b> — Avance: <b>${pct.toFixed(1)}%</b> — Falta: <b>$${fmtNum(falt)}</b>`
+    : `Aún no has guardado meta para este mes.`;
+
+  $("metaBar").style.width = pct + "%";
+
+  if(!s?.length){
+    $("salesTable").innerHTML = `<div class="mini">Sin ventas capturadas en el mes.</div>`;
+    return;
+  }
+  let html=`<table><thead><tr><th>Fecha</th><th class="right">Venta</th><th>Nota</th></tr></thead><tbody>`;
+  s.forEach(r=>{
+    html += `<tr><td>${r.sale_date}</td><td class="right">$${fmtNum(r.amount)}</td><td>${r.note||""}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  $("salesTable").innerHTML = html;
+}
+
+/* =========================
+   HISTORIAL (rango)
+   ========================= */
+$("histFrom").value = todayISO();
+$("histTo").value = todayISO();
+
+$("btnLoadHist").onclick=loadHist;
+$("btnHistExcel").onclick=()=> exportExcel("Historial_Visitas", window.__histRows || []);
+
+async function loadHist(){
+  const from=$("histFrom").value;
+  const to=$("histTo").value;
+  const toD=new Date(to); toD.setDate(toD.getDate()+1);
+  const toPlus=toD.toISOString().slice(0,10);
+
+  const { data, error } = await sb
+    .from("visits")
+    .select("created_at, client_name, reason, duration_min, end_lat, end_lng")
+    .eq("seller_id", user.id)
+    .gte("created_at", from)
+    .lt("created_at", toPlus)
+    .order("created_at", {ascending:false});
+
+  if(error){ $("histTable").innerHTML = `<div class="mini">${error.message}</div>`; return; }
+  window.__histRows = data || [];
+
+  if(!data?.length){
+    $("histTable").innerHTML = `<div class="mini">Sin registros.</div>`; return;
+  }
+
+  let html=`<table><thead><tr>
+    <th>Fecha</th><th>Cliente</th><th>Motivo</th><th class="right">Dur</th><th>Mapa</th>
+  </tr></thead><tbody>`;
+
+  data.forEach(r=>{
+    const map=(r.end_lat && r.end_lng) ? `https://www.google.com/maps?q=${r.end_lat},${r.end_lng}` : "";
+    html += `<tr>
+      <td>${fmtDT(r.created_at)}</td>
+      <td>${r.client_name}</td>
+      <td>${r.reason}</td>
+      <td class="right">${r.duration_min}</td>
+      <td>${map ? `<a href="${map}" target="_blank" rel="noopener">Ver</a>` : "—"}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table>`;
+  $("histTable").innerHTML=html;
+}
+
+/* =========================
+   ADMIN (Realtime)
+   ========================= */
+$("adminFrom").value = todayISO();
+$("adminTo").value = todayISO();
+$("btnAdminReload").onclick=adminReload;
+$("btnAdminExcel").onclick=()=> exportExcel("Admin_Visitas", window.__adminRows || []);
+
+let adminChannel=null;
+
+async function adminReload(){
+  const from=$("adminFrom").value;
+  const to=$("adminTo").value;
+  const reason=$("adminReason").value;
+
+  const toD=new Date(to); toD.setDate(toD.getDate()+1);
+  const toPlus=toD.toISOString().slice(0,10);
+
+  let q = sb
+    .from("visits")
+    .select("created_at, seller_name, client_name, reason, duration_min, end_lat, end_lng")
+    .gte("created_at", from)
+    .lt("created_at", toPlus)
+    .order("created_at", {ascending:false})
+    .limit(200);
+
+  if(reason) q = q.eq("reason", reason);
+
+  const { data, error } = await q;
+  if(error){ $("adminTable").innerHTML = `<div class="mini">${error.message}</div>`; return; }
+
+  window.__adminRows = data || [];
+  const count = data?.length || 0;
+  const avg = count ? (data.reduce((a,r)=>a+Number(r.duration_min||0),0)/count) : 0;
+
+  $("kCount").textContent = count;
+  $("kAvg").textContent = avg.toFixed(1) + " min";
+  $("kLast").textContent = new Date().toLocaleTimeString("es-MX");
+
+  if(!count){
+    $("adminTable").innerHTML = `<div class="mini">Sin registros con ese filtro.</div>`;
+    return;
+  }
+
+  let html=`<table><thead><tr>
+    <th>Fecha</th><th>Vendedor</th><th>Cliente</th><th>Motivo</th><th class="right">Dur</th><th>Mapa</th>
+  </tr></thead><tbody>`;
+
+  data.forEach(r=>{
+    const map=(r.end_lat && r.end_lng) ? `https://www.google.com/maps?q=${r.end_lat},${r.end_lng}` : "";
+    html += `<tr>
+      <td>${fmtDT(r.created_at)}</td>
+      <td>${r.seller_name}</td>
+      <td>${r.client_name}</td>
+      <td>${r.reason}</td>
+      <td class="right">${r.duration_min}</td>
+      <td>${map ? `<a href="${map}" target="_blank" rel="noopener">Ver</a>` : "—"}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  $("adminTable").innerHTML=html;
+}
+
+function startAdminRealtime(){
+  if(role!=="admin") return;
+  if(adminChannel){ sb.removeChannel(adminChannel); adminChannel=null; }
+
+  adminChannel = sb
+    .channel("admin-visits-live")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "visits" },
+      ()=> adminReload()
+    )
+    .subscribe();
+}
+
+/* =========================
+   BOOT
+   ========================= */
+async function boot(){
+  await loadProfile();
+  if(!user || !profile){ showLogin(); return; }
+
+  showApp();
+  setTabs();
+  loadClients();
+  clearVisit();
+  refreshMyVisits();
+  refreshMeta();
+  if(role==="admin"){
+    startAdminRealtime();
+  }
+}
+
+sb.auth.onAuthStateChange(async ()=>{ await boot(); });
+boot();
+</script>
+
+<script>
+  // Service worker (PWA)
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  }
+</script>
+
+</body>
+</html>
