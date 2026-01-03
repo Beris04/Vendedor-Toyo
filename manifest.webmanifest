@@ -1,7 +1,6 @@
 {
 const CACHE = "toyo-visitas-v2";
-
-  "short_name": "ToyoVisitas",
+"short_name": "ToyoVisitas",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#F3F5F8",
