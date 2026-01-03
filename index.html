@@ -19,6 +19,7 @@
       --bg:#F3F5F8; --card:#fff; --border:#d9dde6;
       --text:#0f172a; --muted:#64748b;
       --danger:#dc2626;
+      --ok:#16a34a;
     }
     *{box-sizing:border-box}
     body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -52,6 +53,10 @@
     .progress{height:12px;background:#e8edf6;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
     .bar{height:100%;width:0%;background:var(--blue)}
     .notice{padding:10px 12px;border-radius:12px;border:1px dashed var(--border);background:#fff;color:var(--muted);font-size:12px;line-height:1.35}
+    .ok{color:var(--ok);font-weight:900}
+    .err{color:var(--danger);font-weight:900}
+    a{color:var(--blue);font-weight:900;text-decoration:none}
+    a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
@@ -63,6 +68,7 @@
     </div>
     <div class="row">
       <span class="pill">Red: <b id="net">—</b></span>
+      <span class="pill">Backend: <b id="apiStatus">—</b></span>
       <button class="btn ghost hide" id="btnLogout">Salir</button>
     </div>
   </div>
@@ -72,6 +78,7 @@
     <div class="card">
       <b>Iniciar sesión</b>
       <div class="mini" style="margin:6px 0 12px;">Cada vendedor usa su usuario. Admin ve todo.</div>
+
       <div class="grid two">
         <div>
           <label>Email</label>
@@ -82,11 +89,15 @@
           <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password" />
         </div>
       </div>
+
       <div class="row" style="margin-top:10px;">
         <button class="btn dark" id="btnLogin">Entrar</button>
+        <button class="btn ghost" id="btnForgot">Olvidé mi contraseña</button>
       </div>
+
       <div class="notice" style="margin-top:12px;">
         <b>Importante:</b> El vendedor ya no “elige” vendedor. Queda ligado al login.
+        <br><span class="mini">Si no puedes entrar: revisa que tu usuario exista en Supabase Auth y que tengas perfil en <b>profiles</b>.</span>
       </div>
     </div>
   </section>
@@ -103,7 +114,7 @@
             <label>Cliente visitado</label>
             <input id="client" placeholder="Ej. Sushi Factory / HEB..." list="clientsList" />
             <datalist id="clientsList"></datalist>
-            <div class="mini">Puedes escribir libre o elegir sugerencia (si cargas clientes).</div>
+            <div class="mini">Puedes escribir libre o elegir sugerencia (si usas tabla clients).</div>
           </div>
           <div>
             <label>Motivo</label>
@@ -265,14 +276,16 @@
         </div>
 
         <div id="adminTable" style="margin-top:12px;"></div>
+        <div class="notice" style="margin-top:12px;">
+          Si no se actualiza “en vivo”, revisa que Realtime esté habilitado para la tabla <b>visits</b> en Supabase.
+        </div>
       </div>
     </section>
-
   </section>
 
 <script>
 /* =========================
-   CONFIG (CAMBIA ESTO)
+   CONFIG (CAMBIA SOLO ESTO)
    ========================= */
 const SUPABASE_URL = "PEGA_TU_SUPABASE_URL_AQUI";
 const SUPABASE_ANON_KEY = "PEGA_TU_SUPABASE_ANON_KEY_AQUI";
@@ -308,6 +321,21 @@ function deviceId(){
   if(!v){ v="DEV-"+Math.random().toString(16).slice(2)+"-"+Date.now().toString(16); localStorage.setItem(k,v); }
   return v;
 }
+
+async function pingSupabase(){
+  try{
+    // ping básico: intenta leer 1 registro de profiles (requiere auth para devolver datos, pero sirve para “reachability”)
+    const { error } = await sb.from("profiles").select("user_id").limit(1);
+    if (error && String(error.message||"").toLowerCase().includes("invalid api key")){
+      $("apiStatus").innerHTML = `<span class="err">ANON KEY MAL</span>`;
+      return;
+    }
+    $("apiStatus").innerHTML = `<span class="${navigator.onLine ? 'ok' : ''}">${navigator.onLine ? 'OK' : 'OFF'}</span>`;
+  }catch(e){
+    $("apiStatus").innerHTML = `<span class="err">ERROR</span>`;
+  }
+}
+pingSupabase();
 
 /* =========================
    OFFLINE QUEUE (si falla insert)
@@ -359,7 +387,10 @@ async function loadProfile(){
     .eq("user_id", user.id)
     .single();
 
-  if(error){ alert("Falta profile para este usuario (tabla profiles)."); return; }
+  if(error){
+    alert("Entraste, pero falta tu perfil en la tabla 'profiles'. (Ejecuta el SQL de profiles en Supabase)");
+    return;
+  }
   profile=data;
   role=data.role;
 }
@@ -425,6 +456,19 @@ $("btnLogin").onclick = async ()=>{
   if(error){ alert(error.message); return; }
   await boot();
 };
+
+$("btnForgot").onclick = async ()=>{
+  const email=$("email").value.trim();
+  if(!email) return alert("Escribe tu email primero.");
+  // envía email de reset (tu proyecto debe tener configurado el email provider)
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+  if(error){
+    alert("No se pudo enviar reset: " + error.message);
+    return;
+  }
+  alert("Te envié el correo de recuperación (si tu proyecto tiene email configurado).");
+};
+
 $("btnLogout").onclick = async ()=>{
   await sb.auth.signOut();
   showLogin();
@@ -859,3 +903,4 @@ boot();
 
 </body>
 </html>
+
