@@ -1,50 +1,35 @@
-const CACHE_NAME = "toyo-visitas-v12";
-const ASSETS = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./sw.js"
-];
+const CACHE = "toyo-visitas-v1";
+const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./sw.js"];
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
   self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)));
-    await self.clients.claim();
-  })());
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : null)))
+    )
+  );
+  self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  const url = new URL(req.url);
-
-  // Solo manejar lo de tu GitHub Pages
-  if (url.origin !== location.origin) return;
-
-  // Network-first para manifest (evita “manifest viejo”)
-  if (url.pathname.endsWith("/manifest.webmanifest")) {
-    event.respondWith((async () => {
-      try {
-        const fresh = await fetch(req);
-        const cache = await caches.open(CACHE_NAME);
-        cache.put(req, fresh.clone());
-        return fresh;
-      } catch {
-        return caches.match(req);
-      }
-    })());
-    return;
-  }
-
-  // Cache-first para lo demás
-  event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req))
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  e.respondWith(
+    caches.match(req).then((cached) => {
+      return (
+        cached ||
+        fetch(req)
+          .then((res) => {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+            return res;
+          })
+          .catch(() => cached)
+      );
+    })
   );
 });
-
 
