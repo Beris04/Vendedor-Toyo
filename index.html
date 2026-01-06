@@ -8,9 +8,9 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0046BE">
 
-  <!-- Supabase -->
+  <!-- Supabase UMD (solo 1) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- Excel -->
+  <!-- Excel export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -72,204 +72,203 @@
   </div>
 
   <section class="card">
+    <b>Vendedor</b>
+    <div class="mini" style="margin:6px 0 12px;">Modo simple: sin login. Elige vendedor y registra visitas.</div>
     <div class="grid two">
       <div>
-        <label>Vendedor</label>
+        <label>Selecciona vendedor</label>
         <select id="sellerSelect"></select>
-        <div class="mini">Esto reemplaza el login. El historial se filtra por el vendedor elegido.</div>
       </div>
-      <div>
-        <label>PIN Admin (solo para pestaña Admin)</label>
-        <input id="adminPin" type="password" placeholder="••••" />
-        <div class="mini">No se guarda. Se valida contra Supabase (hash).</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;">
+        <button class="btn dark" id="btnSetSeller">Usar este vendedor</button>
+        <button class="btn ghost" id="btnAdmin">🔒 Admin</button>
       </div>
+    </div>
+    <div class="notice" style="margin-top:10px;">
+      <b>Tip:</b> esto guarda el vendedor en el dispositivo (localStorage).
     </div>
   </section>
 
-  <div class="tabs" id="tabs"></div>
+  <section id="view_app" class="hide">
+    <div class="tabs" id="tabs"></div>
 
-  <!-- VISITA -->
-  <section id="view_visita" class="hide">
-    <div class="card">
-      <div class="grid two">
-        <div>
-          <label>Cliente visitado</label>
-          <input id="client" placeholder="Ej. Sushi Factory / HEB..." />
+    <!-- VISITA -->
+    <section id="view_visita" class="hide">
+      <div class="card">
+        <div class="grid two">
+          <div>
+            <label>Cliente visitado</label>
+            <input id="client" placeholder="Ej. Sushi Factory / HEB..." />
+          </div>
+          <div>
+            <label>Motivo</label>
+            <select id="reason">
+              <option value="">Selecciona…</option>
+              <option>Entrega de producto</option>
+              <option>Cobranza</option>
+              <option>Negociación</option>
+              <option>Degustación</option>
+              <option>Cotización</option>
+              <option>Visita de seguimiento</option>
+              <option>Otro</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label>Motivo</label>
-          <select id="reason">
-            <option value="">Selecciona…</option>
-            <option>Entrega de producto</option>
-            <option>Cobranza</option>
-            <option>Negociación</option>
-            <option>Degustación</option>
-            <option>Cotización</option>
-            <option>Visita de seguimiento</option>
-            <option>Otro</option>
-          </select>
+
+        <div style="margin-top:10px;">
+          <label>Comentarios</label>
+          <textarea id="comments" placeholder="Acuerdos, pendientes, observaciones…"></textarea>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnStart">▶ Iniciar (GPS)</button>
+          <button class="btn danger" id="btnEnd" disabled>■ Terminar (GPS + Guardar)</button>
+          <button class="btn ghost" id="btnClear">Limpiar</button>
+        </div>
+
+        <div class="grid two" style="margin-top:12px;">
+          <div class="pill">Inicio: <b id="startInfo">—</b></div>
+          <div class="pill">Duración: <b id="durInfo">—</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <b>Últimas visitas (este vendedor)</b>
+          <button class="btn ghost" id="btnMyExcel">⬇ Excel</button>
+        </div>
+        <div id="myVisits" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <!-- META -->
+    <section id="view_meta" class="hide">
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Mes</label>
+            <input id="goalMonth" type="month" />
+          </div>
+          <div>
+            <label>Meta del mes (MXN)</label>
+            <input id="goalVal" type="number" inputmode="decimal" placeholder="Ej. 500000" />
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn dark" id="btnSaveGoal">Guardar meta</button>
+            <button class="btn ghost" id="btnRefreshMeta">Actualizar</button>
+          </div>
         </div>
       </div>
 
-      <div style="margin-top:10px;">
-        <label>Comentarios</label>
-        <textarea id="comments" placeholder="Acuerdos, pendientes, observaciones…"></textarea>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <button class="btn primary" id="btnStart">▶ Iniciar (GPS)</button>
-        <button class="btn danger" id="btnEnd" disabled>■ Terminar (GPS + Guardar)</button>
-        <button class="btn ghost" id="btnClear">Limpiar</button>
-      </div>
-
-      <div class="grid two" style="margin-top:12px;">
-        <div class="pill">Inicio: <b id="startInfo">—</b></div>
-        <div class="pill">Duración: <b id="durInfo">—</b></div>
-      </div>
-
-      <div class="notice" style="margin-top:12px;">
-        Guarda inicio/fin + GPS inicio/fin. created_at es hora servidor.
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <b>Últimas visitas (del vendedor)</b>
-        <button class="btn ghost" id="btnMyExcel">⬇ Excel</button>
-      </div>
-      <div id="myVisits" style="margin-top:10px;"></div>
-    </div>
-  </section>
-
-  <!-- META -->
-  <section id="view_meta" class="hide">
-    <div class="card">
-      <div class="grid three">
-        <div>
-          <label>Mes</label>
-          <input id="goalMonth" type="month" />
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Fecha</label>
+            <input id="saleDate" type="date" />
+          </div>
+          <div>
+            <label>Venta del día (MXN)</label>
+            <input id="saleAmt" type="number" inputmode="decimal" placeholder="Ej. 25000" />
+          </div>
+          <div>
+            <label>Nota (opcional)</label>
+            <input id="saleNote" placeholder="Ej. pedido grande / promo..." />
+          </div>
         </div>
-        <div>
-          <label>Meta del mes (MXN)</label>
-          <input id="goalVal" type="number" inputmode="decimal" placeholder="Ej. 500000" />
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:10px;">
-          <button class="btn dark" id="btnSaveGoal">Guardar meta</button>
-          <button class="btn ghost" id="btnRefreshMeta">Actualizar</button>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnSaveSale">Guardar venta</button>
+          <button class="btn ghost" id="btnSalesExcel">⬇ Excel</button>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="grid three">
-        <div>
-          <label>Fecha</label>
-          <input id="saleDate" type="date" />
-        </div>
-        <div>
-          <label>Venta del día (MXN)</label>
-          <input id="saleAmt" type="number" inputmode="decimal" placeholder="Ej. 25000" />
-        </div>
-        <div>
-          <label>Nota (opcional)</label>
-          <input id="saleNote" placeholder="Ej. pedido grande / promo..." />
+      <div class="card">
+        <b>Progreso del mes</b>
+        <div class="mini" id="metaSummary" style="margin:6px 0 10px;">—</div>
+        <div class="progress"><div class="bar" id="metaBar"></div></div>
+        <div id="salesTable" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="view_hist" class="hide">
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Desde</label>
+            <input id="histFrom" type="date" />
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input id="histTo" type="date" />
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn primary" id="btnLoadHist">Cargar</button>
+            <button class="btn ghost" id="btnHistExcel">⬇ Excel</button>
+          </div>
         </div>
       </div>
-      <div class="row" style="margin-top:10px;">
-        <button class="btn primary" id="btnSaveSale">Guardar venta</button>
-        <button class="btn ghost" id="btnSalesExcel">⬇ Excel</button>
+      <div class="card">
+        <b>Visitas</b>
+        <div id="histTable" style="margin-top:10px;"></div>
       </div>
-    </div>
+    </section>
 
-    <div class="card">
-      <b>Progreso del mes</b>
-      <div class="mini" id="metaSummary" style="margin:6px 0 10px;">—</div>
-      <div class="progress"><div class="bar" id="metaBar"></div></div>
-      <div id="salesTable" style="margin-top:12px;"></div>
-    </div>
-  </section>
-
-  <!-- HISTORIAL -->
-  <section id="view_hist" class="hide">
-    <div class="card">
-      <div class="grid three">
-        <div>
-          <label>Desde</label>
-          <input id="histFrom" type="date" />
-        </div>
-        <div>
-          <label>Hasta</label>
-          <input id="histTo" type="date" />
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:10px;">
-          <button class="btn primary" id="btnLoadHist">Cargar</button>
-          <button class="btn ghost" id="btnHistExcel">⬇ Excel</button>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <b>Visitas</b>
-      <div id="histTable" style="margin-top:10px;"></div>
-    </div>
-  </section>
-
-  <!-- ADMIN -->
-  <section id="view_admin" class="hide">
-    <div class="card">
-      <div class="row" style="justify-content:space-between;">
-        <b>Admin – Visitas</b>
+    <!-- ADMIN -->
+    <section id="view_admin" class="hide">
+      <div class="card">
+        <b>Admin</b>
+        <div class="mini" style="margin:6px 0 10px;">Pide PIN para entrar al panel.</div>
         <div class="row">
-          <button class="btn ghost" id="btnAdminReload">🔄 Recargar</button>
+          <input id="adminPin" placeholder="PIN" style="max-width:220px" />
+          <button class="btn dark" id="btnEnterAdmin">Entrar</button>
+        </div>
+      </div>
+
+      <div class="card hide" id="adminPanel">
+        <div class="row" style="justify-content:space-between;">
+          <b>Admin – Visitas</b>
           <button class="btn ghost" id="btnAdminExcel">⬇ Excel</button>
         </div>
-      </div>
 
-      <div class="grid three" style="margin-top:10px;">
-        <div>
-          <label>Desde</label>
-          <input id="adminFrom" type="date" />
+        <div class="grid three" style="margin-top:10px;">
+          <div>
+            <label>Desde</label>
+            <input id="adminFrom" type="date" />
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input id="adminTo" type="date" />
+          </div>
+          <div>
+            <label>Motivo</label>
+            <select id="adminReason">
+              <option value="">Todos</option>
+              <option>Entrega de producto</option>
+              <option>Cobranza</option>
+              <option>Negociación</option>
+              <option>Degustación</option>
+              <option>Cotización</option>
+              <option>Visita de seguimiento</option>
+              <option>Otro</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label>Hasta</label>
-          <input id="adminTo" type="date" />
-        </div>
-        <div>
-          <label>Motivo (opcional)</label>
-          <select id="adminReason">
-            <option value="">Todos</option>
-            <option>Entrega de producto</option>
-            <option>Cobranza</option>
-            <option>Negociación</option>
-            <option>Degustación</option>
-            <option>Cotización</option>
-            <option>Visita de seguimiento</option>
-            <option>Otro</option>
-          </select>
-        </div>
-      </div>
 
-      <div class="grid three" style="margin-top:10px;">
-        <span class="pill">Registros: <b id="kCount">—</b></span>
-        <span class="pill">Prom. duración: <b id="kAvg">—</b></span>
-        <span class="pill">Última: <b id="kLast">—</b></span>
+        <div id="adminTable" style="margin-top:12px;"></div>
       </div>
+    </section>
 
-      <div id="adminTable" style="margin-top:12px;"></div>
-      <div class="notice" style="margin-top:12px;">
-        Admin requiere PIN válido. (Se valida con función en Supabase)
-      </div>
-    </div>
   </section>
 
 <script>
 /* =========================
-   CONFIG (SOLO ESTO)
+   CONFIG (PON TUS VALORES)
    ========================= */
-const SUPABASE_URL = "https://alprfxtjoyszkqvoeqkb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFscHJmeHRqb3lzemtxdm9lcWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NDg4MzUsImV4cCI6MjA4MzAyNDgzNX0.-nAPH5bv0e7oDvySgY9G5B83_afn34ByjmjnTlfiqqI";
+const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+const ADMIN_PIN = "2026"; // cambia este pin
 
-/* ========================= */
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id)=>document.getElementById(id);
 
 function setNet(){ $("net").textContent = navigator.onLine ? "Online" : "Offline"; }
@@ -293,34 +292,65 @@ function exportExcel(name, rows){
   XLSX.writeFile(wb, `${name}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-function deviceId(){
-  const k="toyo_device_id_v1";
-  let v=localStorage.getItem(k);
-  if(!v){ v="DEV-"+Math.random().toString(16).slice(2)+"-"+Date.now().toString(16); localStorage.setItem(k,v); }
-  return v;
-}
-
-let sellers = [];
-let currentSeller = null; // {email, display_name}
-
-/* =========================
-   STATUS BACKEND
-   ========================= */
-async function pingSupabase(){
+async function ping(){
   try{
     const { error } = await sb.from("sellers").select("email").limit(1);
-    if(error && String(error.message||"").toLowerCase().includes("invalid api key")){
-      $("apiStatus").innerHTML = `<span class="err">ANON KEY MAL</span>`;
-      return;
-    }
+    if(error) throw error;
     $("apiStatus").innerHTML = `<span class="ok">OK</span>`;
   }catch(e){
     $("apiStatus").innerHTML = `<span class="err">ERROR</span>`;
   }
 }
 
+let currentSeller = null; // {email, display_name}
+
+async function loadSellers(){
+  const { data, error } = await sb.from("sellers").select("email, display_name, active").eq("active", true).order("display_name");
+  if(error){ alert("No pude cargar vendedores: " + error.message); return; }
+  const sel=$("sellerSelect"); sel.innerHTML="";
+  (data||[]).forEach(s=>{
+    const op=document.createElement("option");
+    op.value=s.email;
+    op.textContent=`${s.display_name} — ${s.email}`;
+    op.dataset.name=s.display_name;
+    sel.appendChild(op);
+  });
+
+  // si ya hay guardado
+  const savedEmail = localStorage.getItem("toyo_seller_email");
+  const savedName  = localStorage.getItem("toyo_seller_name");
+  if(savedEmail && savedName){
+    currentSeller = { email:savedEmail, display_name:savedName };
+    // seleccionar en dropdown si existe
+    [...sel.options].forEach(o=>{ if(o.value===savedEmail) sel.value=savedEmail; });
+    activateApp();
+  }
+}
+
+function activateApp(){
+  if(!currentSeller) return;
+  $("who").textContent = `${currentSeller.display_name} (${currentSeller.email})`;
+  $("view_app").classList.remove("hide");
+  setTabs();
+  clearVisit();
+  refreshMyVisits();
+  refreshMeta();
+}
+
+$("btnSetSeller").onclick=()=>{
+  const sel=$("sellerSelect");
+  const email=sel.value;
+  const name=sel.options[sel.selectedIndex]?.textContent?.split(" — ")[0] || email;
+  currentSeller = { email, display_name:name };
+  localStorage.setItem("toyo_seller_email", email);
+  localStorage.setItem("toyo_seller_name", name);
+  activateApp();
+};
+
+$("btnAdmin").onclick=()=>openTab("admin");
+
 /* =========================
-   UI TABS
+   TABS
    ========================= */
 function setTabs(){
   const tabs = [
@@ -329,7 +359,7 @@ function setTabs(){
     {id:"hist", label:"📆 Historial"},
     {id:"admin", label:"🔒 Admin"}
   ];
-  $("tabs").innerHTML = "";
+  $("tabs").innerHTML="";
   tabs.forEach(t=>{
     const el=document.createElement("div");
     el.className="tab";
@@ -339,86 +369,27 @@ function setTabs(){
   });
   openTab("visita");
 }
+
 function openTab(id){
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   [...$("tabs").children].forEach(x=>{
-    const tx=x.textContent;
-    if((tx.includes("Visita") && id==="visita") ||
-       (tx.includes("Meta") && id==="meta") ||
-       (tx.includes("Historial") && id==="hist") ||
-       (tx.includes("Admin") && id==="admin")) x.classList.add("active");
+    if((x.textContent.includes("Visita") && id==="visita") ||
+       (x.textContent.includes("Meta") && id==="meta") ||
+       (x.textContent.includes("Historial") && id==="hist") ||
+       (x.textContent.includes("Admin") && id==="admin")) x.classList.add("active");
   });
-
   ["visita","meta","hist","admin"].forEach(v=>{
     $("view_"+v).classList.toggle("hide", v!==id);
   });
-
-  if(!currentSeller) return;
-
   if(id==="visita") refreshMyVisits();
   if(id==="meta") refreshMeta();
-  if(id==="hist") loadHist();
-  if(id==="admin") adminReload();
 }
 
 /* =========================
-   LOAD SELLERS
+   VISITAS
    ========================= */
-async function loadSellers(){
-  const { data, error } = await sb
-    .from("sellers")
-    .select("email, display_name")
-    .eq("active", true)
-    .order("display_name", {ascending:true});
+let current=null, timer=null;
 
-  if(error){
-    alert("No pude cargar vendedores: " + error.message);
-    return;
-  }
-
-  sellers = data || [];
-  const sel = $("sellerSelect");
-  sel.innerHTML = `<option value="">Selecciona…</option>` + sellers.map(s=>(
-    `<option value="${s.email}">${s.display_name}</option>`
-  )).join("");
-
-  // intenta recordar el último
-  const last = localStorage.getItem("toyo_last_seller") || "";
-  if(last && sellers.some(s=>s.email===last)){
-    sel.value = last;
-    onSellerChange();
-  }
-}
-
-function onSellerChange(){
-  const email = $("sellerSelect").value;
-  const s = sellers.find(x=>x.email===email);
-  currentSeller = s || null;
-
-  if(!currentSeller){
-    $("who").textContent = "Selecciona vendedor";
-    return;
-  }
-  localStorage.setItem("toyo_last_seller", currentSeller.email);
-  $("who").textContent = `${currentSeller.display_name} (${currentSeller.email})`;
-
-  // defaults
-  $("goalMonth").value = monthISO();
-  $("saleDate").value = todayISO();
-  $("histFrom").value = todayISO();
-  $("histTo").value = todayISO();
-  $("adminFrom").value = todayISO();
-  $("adminTo").value = todayISO();
-
-  refreshMyVisits();
-  refreshMeta();
-  loadHist();
-}
-$("sellerSelect").addEventListener("change", onSellerChange);
-
-/* =========================
-   GPS
-   ========================= */
 function getGeo(){
   return new Promise((resolve,reject)=>{
     if(!navigator.geolocation) return reject(new Error("Sin geolocalización"));
@@ -430,11 +401,6 @@ function getGeo(){
   });
 }
 
-/* =========================
-   VISIT FLOW
-   ========================= */
-let current=null, timer=null;
-
 function clearVisit(){
   current=null;
   $("startInfo").textContent="—";
@@ -443,13 +409,14 @@ function clearVisit(){
   $("btnEnd").disabled=true;
   if(timer){ clearInterval(timer); timer=null; }
 }
+
 $("btnClear").onclick=()=>{
   $("client").value=""; $("reason").value=""; $("comments").value="";
   clearVisit();
 };
 
 $("btnStart").onclick=async ()=>{
-  if(!currentSeller) return alert("Selecciona vendedor.");
+  if(!currentSeller) return alert("Selecciona vendedor primero.");
   const client=$("client").value.trim();
   const reason=$("reason").value.trim();
   if(!client) return alert("Escribe el cliente.");
@@ -467,8 +434,7 @@ $("btnStart").onclick=async ()=>{
       comments: $("comments").value.trim(),
       start_ts: start.toISOString(),
       start_ms: Date.now(),
-      start_lat:g.lat, start_lng:g.lng, start_acc:g.acc,
-      device_id: deviceId()
+      start_lat:g.lat, start_lng:g.lng, start_acc:g.acc
     };
     $("startInfo").textContent = `${fmtDT(current.start_ts)} | ±${Math.round(g.acc)}m`;
     $("btnEnd").disabled=false;
@@ -507,17 +473,13 @@ $("btnEnd").onclick=async ()=>{
       start_acc: current.start_acc,
       end_lat: g.lat,
       end_lng: g.lng,
-      end_acc: g.acc,
-      device_id: current.device_id
+      end_acc: g.acc
     };
 
     const { error } = await sb.from("visits").insert(payload);
-    if(error){
-      alert("No se pudo guardar: " + error.message);
-    }else{
-      alert("✅ Visita guardada.");
-    }
+    if(error) return alert("No se pudo guardar: " + error.message);
 
+    alert("✅ Visita guardada.");
     clearVisit();
     refreshMyVisits();
 
@@ -531,7 +493,7 @@ async function refreshMyVisits(){
   if(!currentSeller) return;
   const { data, error } = await sb
     .from("visits")
-    .select("id, created_at, client_name, reason, duration_min, end_lat, end_lng")
+    .select("id, created_at, client_name, reason, duration_min, end_lat, end_lng, seller_email, seller_name")
     .eq("seller_email", currentSeller.email)
     .order("created_at", { ascending:false })
     .limit(20);
@@ -565,72 +527,67 @@ async function refreshMyVisits(){
   html += `</tbody></table>`;
   $("myVisits").innerHTML = html;
 }
-$("btnMyExcel").onclick=()=> exportExcel("Visitas_"+(currentSeller?currentSeller.display_name:""), window.__myVisits || []);
+
+$("btnMyExcel").onclick=()=> exportExcel("Mis_Visitas", window.__myVisits || []);
 
 /* =========================
    META
    ========================= */
 function monthToDate(m){ return `${m}-01`; }
+
 $("goalMonth").value = monthISO();
 $("saleDate").value = todayISO();
+$("histFrom").value = todayISO();
+$("histTo").value = todayISO();
+$("adminFrom").value = todayISO();
+$("adminTo").value = todayISO();
 
 $("btnSaveGoal").onclick = async ()=>{
-  if(!currentSeller) return alert("Selecciona vendedor.");
+  if(!currentSeller) return alert("Selecciona vendedor primero.");
   const m=$("goalMonth").value;
   const goal=Number($("goalVal").value||0);
   if(!m) return alert("Selecciona mes.");
   if(goal<=0) return alert("Meta > 0.");
 
-  const payload = {
-    seller_email: currentSeller.email,
-    month: monthToDate(m),
-    goal,
-    updated_at: new Date().toISOString()
-  };
+  const payload = { seller_email: currentSeller.email, month: monthToDate(m), goal, updated_at: new Date().toISOString() };
   const { error } = await sb.from("monthly_goals").upsert(payload, { onConflict:"seller_email,month" });
-  if(error) alert("No se pudo guardar meta: " + error.message);
-  else alert("✅ Meta guardada.");
+  if(error) return alert("Error guardando meta: " + error.message);
+  alert("✅ Meta guardada.");
   refreshMeta();
 };
 
 $("btnSaveSale").onclick = async ()=>{
-  if(!currentSeller) return alert("Selecciona vendedor.");
+  if(!currentSeller) return alert("Selecciona vendedor primero.");
   const d=$("saleDate").value;
   const amt=Number($("saleAmt").value||0);
   const note=$("saleNote").value.trim();
   if(!d) return alert("Selecciona fecha.");
 
-  const payload = {
-    seller_email: currentSeller.email,
-    sale_date:d,
-    amount:amt,
-    note,
-    updated_at: new Date().toISOString()
-  };
+  const payload = { seller_email: currentSeller.email, sale_date:d, amount:amt, note };
   const { error } = await sb.from("daily_sales").upsert(payload, { onConflict:"seller_email,sale_date" });
-  if(error) alert("No se pudo guardar venta: " + error.message);
-  else alert("✅ Venta guardada.");
+  if(error) return alert("Error guardando venta: " + error.message);
+
+  alert("✅ Venta guardada.");
   $("saleAmt").value=""; $("saleNote").value="";
   refreshMeta();
 };
 
 $("btnRefreshMeta").onclick=refreshMeta;
-$("btnSalesExcel").onclick=()=> exportExcel("Ventas_"+(currentSeller?currentSeller.display_name:""), window.__salesRows || []);
+$("btnSalesExcel").onclick=()=> exportExcel("Ventas_Diarias", window.__salesRows || []);
 
 async function refreshMeta(){
   if(!currentSeller) return;
   const m=$("goalMonth").value || monthISO();
   const monthDate = monthToDate(m);
 
-  const { data: g, error: ge } = await sb
+  const { data: g } = await sb
     .from("monthly_goals")
     .select("goal")
     .eq("seller_email", currentSeller.email)
     .eq("month", monthDate)
     .maybeSingle();
 
-  if(ge){ $("metaSummary").textContent = ge.message; return; }
-  if(g?.goal != null) $("goalVal").value = g.goal;
+  if(g?.goal) $("goalVal").value = g.goal;
 
   const start = monthDate;
   const endD = new Date(monthDate); endD.setMonth(endD.getMonth()+1);
@@ -673,10 +630,8 @@ async function refreshMeta(){
 /* =========================
    HISTORIAL
    ========================= */
-$("histFrom").value = todayISO();
-$("histTo").value = todayISO();
 $("btnLoadHist").onclick=loadHist;
-$("btnHistExcel").onclick=()=> exportExcel("Historial_"+(currentSeller?currentSeller.display_name:""), window.__histRows || []);
+$("btnHistExcel").onclick=()=> exportExcel("Historial_Visitas", window.__histRows || []);
 
 async function loadHist(){
   if(!currentSeller) return;
@@ -719,28 +674,22 @@ async function loadHist(){
 }
 
 /* =========================
-   ADMIN (PIN)
+   ADMIN
    ========================= */
-$("adminFrom").value = todayISO();
-$("adminTo").value = todayISO();
-$("btnAdminReload").onclick=adminReload;
+let adminUnlocked=false;
+
+$("btnEnterAdmin").onclick=()=>{
+  const pin=$("adminPin").value.trim();
+  if(pin !== ADMIN_PIN) return alert("PIN incorrecto.");
+  adminUnlocked=true;
+  $("adminPanel").classList.remove("hide");
+  adminReload();
+};
+
 $("btnAdminExcel").onclick=()=> exportExcel("Admin_Visitas", window.__adminRows || []);
 
-async function checkAdminPin(){
-  const pin = ($("adminPin").value || "").trim();
-  if(!pin) return false;
-  const { data, error } = await sb.rpc("admin_check_pin", { pin });
-  if(error) return false;
-  return data === true;
-}
-
 async function adminReload(){
-  const ok = await checkAdminPin();
-  if(!ok){
-    $("adminTable").innerHTML = `<div class="mini"><span class="err">PIN inválido</span>. Escribe el PIN admin arriba.</div>`;
-    $("kCount").textContent="—"; $("kAvg").textContent="—"; $("kLast").textContent="—";
-    return;
-  }
+  if(!adminUnlocked) return;
 
   const from=$("adminFrom").value;
   const to=$("adminTo").value;
@@ -763,14 +712,7 @@ async function adminReload(){
   if(error){ $("adminTable").innerHTML = `<div class="mini">${error.message}</div>`; return; }
 
   window.__adminRows = data || [];
-  const count = data?.length || 0;
-  const avg = count ? (data.reduce((a,r)=>a+Number(r.duration_min||0),0)/count) : 0;
-
-  $("kCount").textContent = count;
-  $("kAvg").textContent = avg.toFixed(1) + " min";
-  $("kLast").textContent = new Date().toLocaleTimeString("es-MX");
-
-  if(!count){
+  if(!data?.length){
     $("adminTable").innerHTML = `<div class="mini">Sin registros con ese filtro.</div>`;
     return;
   }
@@ -795,21 +737,21 @@ async function adminReload(){
   $("adminTable").innerHTML=html;
 }
 
-/* =========================
-   BOOT
-   ========================= */
-async function boot(){
-  await pingSupabase();
-  setTabs();
-  await loadSellers();
-}
-boot();
+$("adminReason").addEventListener("change", ()=>adminReload());
+$("adminFrom").addEventListener("change", ()=>adminReload());
+$("adminTo").addEventListener("change", ()=>adminReload());
 
-// PWA
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
-}
+/* BOOT */
+ping();
+loadSellers();
+</script>
+
+<script>
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  }
 </script>
 
 </body>
 </html>
+
