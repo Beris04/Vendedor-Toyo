@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Toyo – Seguimiento (Lite)</title>
+
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0046BE">
+
+  <!-- Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --blue:#0046BE; --navy:#002E80;
+      --bg:#F3F5F8; --card:#fff; --border:#d9dde6;
+      --text:#0f172a; --muted:#64748b;
+      --danger:#dc2626; --ok:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:14px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+    .brand b{color:var(--blue);font-size:16px}
+    .brand div{color:var(--muted);font-size:12px;margin-top:2px}
+    .pill{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 10px;font-size:12px;color:var(--muted);font-weight:800}
+    .pill b{color:var(--text)}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{border:1px solid var(--border);background:#fff;padding:10px 12px;border-radius:12px;font-weight:900;cursor:pointer;user-select:none}
+    .tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 6px 18px rgba(15,23,42,.06);margin-bottom:12px}
+    .grid{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:900px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
+    label{display:block;font-size:12px;color:var(--muted);font-weight:900;margin-bottom:6px}
+    input,select,textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:15px;background:#fff;outline:none}
+    textarea{min-height:90px;resize:vertical}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;padding:12px 14px;font-weight:900;cursor:pointer}
+    .btn.primary{background:var(--blue);color:#fff}
+    .btn.dark{background:var(--navy);color:#fff}
+    .btn.ghost{background:#fff;border:1px solid var(--border)}
+    .btn.danger{background:var(--danger);color:#fff}
+    .mini{font-size:12px;color:var(--muted)}
+    .hide{display:none !important}
+    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
+    th,td{padding:10px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+    th{background:#f8fafc;text-align:left;color:var(--muted);font-weight:900}
+    tr:last-child td{border-bottom:0}
+    .right{text-align:right}
+    .progress{height:12px;background:#e8edf6;border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+    .bar{height:100%;width:0%;background:var(--blue)}
+    .notice{padding:10px 12px;border-radius:12px;border:1px dashed var(--border);background:#fff;color:var(--muted);font-size:12px;line-height:1.35}
+    .ok{color:var(--ok);font-weight:900}
+    .err{color:var(--danger);font-weight:900}
+    a{color:var(--blue);font-weight:900;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .sep{height:1px;background:var(--border);margin:12px 0}
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <div class="brand">
+      <b>Toyo – Seguimiento (Lite)</b>
+      <div id="who">Selecciona vendedor</div>
+    </div>
+    <div class="row">
+      <span class="pill">Red: <b id="net">—</b></span>
+      <span class="pill">Modo: <b>OFFLINE</b></span>
+      <button class="btn ghost hide" id="btnChangeSeller">Cambiar vendedor</button>
+    </div>
+  </div>
+
+  <!-- SELECT SELLER -->
+  <section id="view_seller">
+    <div class="card">
+      <b>Vendedor</b>
+      <div class="mini" style="margin:6px 0 12px;">
+        Modo simple sin servidor. Elige vendedor y registra visitas (GPS).
+      </div>
+
+      <div class="grid two">
+        <div>
+          <label>Selecciona vendedor</label>
+          <select id="sellerSel"></select>
+          <div class="mini">*Puedes editar la lista de vendedores dentro del código (Sellers).</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:10px;">
+          <button class="btn dark" id="btnUseSeller">Usar este vendedor</button>
+        </div>
+      </div>
+
+      <div class="notice" style="margin-top:12px;">
+        ✅ Funciona sin internet (se guarda local).<br>
+        ✅ Al final exportas Excel y lo mandas a dirección.<br>
+        ⚠️ Sin backend no hay “seguridad real” contra manipulación avanzada, pero es estable y rápido.
+      </div>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="view_app" class="hide">
+    <div class="tabs" id="tabs"></div>
+
+    <!-- VISITA -->
+    <section id="view_visita" class="hide">
+      <div class="card">
+        <div class="grid two">
+          <div>
+            <label>Cliente visitado</label>
+            <input id="client" placeholder="Ej. Sushi Factory / HEB..." />
+          </div>
+          <div>
+            <label>Motivo</label>
+            <select id="reason">
+              <option value="">Selecciona…</option>
+              <option>Entrega de producto</option>
+              <option>Cobranza</option>
+              <option>Negociación</option>
+              <option>Degustación</option>
+              <option>Cotización</option>
+              <option>Visita de seguimiento</option>
+              <option>Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>Comentarios</label>
+          <textarea id="comments" placeholder="Acuerdos, pendientes, observaciones…"></textarea>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnStart">▶ Iniciar (GPS)</button>
+          <button class="btn danger" id="btnEnd" disabled>■ Terminar (GPS + Guardar)</button>
+          <button class="btn ghost" id="btnClear">Limpiar</button>
+        </div>
+
+        <div class="grid two" style="margin-top:12px;">
+          <div class="pill">Inicio: <b id="startInfo">—</b></div>
+          <div class="pill">Duración: <b id="durInfo">—</b></div>
+        </div>
+
+        <div class="notice" style="margin-top:12px;">
+          Se guarda: hora del dispositivo + GPS inicio/fin. Si no hay señal, igual se guarda.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <b>Últimas visitas (de este vendedor)</b>
+          <button class="btn ghost" id="btnMyExcel">⬇ Excel vendedor</button>
+        </div>
+        <div id="myVisits" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <!-- META -->
+    <section id="view_meta" class="hide">
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Mes</label>
+            <input id="goalMonth" type="month" />
+          </div>
+          <div>
+            <label>Meta del mes (MXN)</label>
+            <input id="goalVal" type="number" inputmode="decimal" placeholder="Ej. 500000" />
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn dark" id="btnSaveGoal">Guardar meta</button>
+            <button class="btn ghost" id="btnRefreshMeta">Actualizar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Fecha</label>
+            <input id="saleDate" type="date" />
+          </div>
+          <div>
+            <label>Venta del día (MXN)</label>
+            <input id="saleAmt" type="number" inputmode="decimal" placeholder="Ej. 25000" />
+          </div>
+          <div>
+            <label>Nota (opcional)</label>
+            <input id="saleNote" placeholder="Ej. pedido grande / promo..." />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnSaveSale">Guardar venta</button>
+          <button class="btn ghost" id="btnSalesExcel">⬇ Excel ventas</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <b>Progreso del mes</b>
+        <div class="mini" id="metaSummary" style="margin:6px 0 10px;">—</div>
+        <div class="progress"><div class="bar" id="metaBar"></div></div>
+        <div id="salesTable" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="view_hist" class="hide">
+      <div class="card">
+        <div class="grid three">
+          <div>
+            <label>Desde</label>
+            <input id="histFrom" type="date" />
+          </div>
+          <div>
+            <label>Hasta</label>
+            <input id="histTo" type="date" />
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn primary" id="btnLoadHist">Cargar</button>
+            <button class="btn ghost" id="btnHistExcel">⬇ Excel rango</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <b>Visitas</b>
+        <div id="histTable" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="view_admin" class="hide">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <b>Admin (Importar Excels)</b>
+          <div class="row">
+            <button class="btn danger" id="btnAdminLock">🔒 Bloquear</button>
+          </div>
+        </div>
+
+        <div class="notice" style="margin-top:10px;">
+          Aquí NO jala “en vivo” (porque no hay servidor).<br>
+          Flujo: cada vendedor exporta su Excel → te lo manda → tú importas varios aquí → ves todo junto y exportas consolidado.
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="grid two">
+          <div>
+            <label>Importar archivos Excel (uno o varios)</label>
+            <input id="adminFiles" type="file" accept=".xlsx,.xls" multiple />
+            <div class="mini">Tip: selecciona varios archivos a la vez.</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;">
+            <button class="btn ghost" id="btnAdminClear">Limpiar importados</button>
+            <button class="btn dark" id="btnAdminExport">⬇ Excel consolidado</button>
+          </div>
+        </div>
+
+        <div class="grid three" style="margin-top:12px;">
+          <span class="pill">Registros: <b id="kCount">0</b></span>
+          <span class="pill">Prom. duración: <b id="kAvg">—</b></span>
+          <span class="pill">Última carga: <b id="kLast">—</b></span>
+        </div>
+
+        <div id="adminTable" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+  </section>
+
+<script>
+/* =========================
+   CONFIG
+   ========================= */
+
+// 1) CAMBIA TU PIN ADMIN AQUÍ
+const ADMIN_PIN = "726819";
+
+// 2) LISTA DE VENDEDORES (edítala a tu gusto)
+const SELLERS = [
+  { id:"hberistain", name:"Hector Beristain" },
+  { id:"daguilar", name:"Aguilar Neri Daniel" },
+  { id:"jdelacruz", name:"De la Cruz Ponce Julio Cesar" },
+  { id:"sgaribay", name:"Garibay Ortiz Sergio Joel" },
+  { id:"aperez", name:"Perez Mar Alan Roberto" }
+];
+
+/* =========================
+   HELPERS
+   ========================= */
+const $ = (id)=>document.getElementById(id);
+
+function setNet(){ $("net").textContent = navigator.onLine ? "Online" : "Offline"; }
+addEventListener("online", setNet); addEventListener("offline", setNet); setNet();
+
+function todayISO(){
+  const d=new Date(); const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+function monthISO(){
+  const d=new Date(); const mm=String(d.getMonth()+1).padStart(2,"0");
+  return `${d.getFullYear()}-${mm}`;
+}
+function fmtDT(v){ try{return new Date(v).toLocaleString("es-MX")}catch(e){return String(v||"")} }
+function fmtNum(n){ return Number(n||0).toLocaleString("es-MX",{maximumFractionDigits:2}); }
+
+function exportExcel(name, rows){
+  const ws = XLSX.utils.json_to_sheet(rows || []);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Datos");
+  XLSX.writeFile(wb, `${name}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function deviceId(){
+  const k="toyo_device_id_lite";
+  let v=localStorage.getItem(k);
+  if(!v){ v="DEV-"+Math.random().toString(16).slice(2)+"-"+Date.now().toString(16); localStorage.setItem(k,v); }
+  return v;
+}
+
+function getGeo(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation) return reject(new Error("Sin geolocalización"));
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy}),
+      e=>reject(new Error(e.message||"Error GPS")),
+      { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
+    );
+  });
+}
+
+/* =========================
+   STORAGE
+   ========================= */
+const SELLER_KEY = "toyo_lite_seller";
+const VISITS_KEY = "toyo_lite_visits_v1";
+const GOALS_KEY  = "toyo_lite_goals_v1";
+const SALES_KEY  = "toyo_lite_sales_v1";
+
+function loadJSON(key, fallback){
+  try{ return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch(e){ return fallback; }
+}
+function saveJSON(key, data){
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+/* =========================
+   STATE
+   ========================= */
+let seller = null;
+let current = null;
+let timer = null;
+let adminUnlocked = false;
+let adminImported = []; // rows from imported excels
+
+/* =========================
+   UI NAV
+   ========================= */
+function showSellerPick(){
+  $("view_seller").classList.remove("hide");
+  $("view_app").classList.add("hide");
+  $("who").textContent = "Selecciona vendedor";
+  $("btnChangeSeller").classList.add("hide");
+}
+
+function showApp(){
+  $("view_seller").classList.add("hide");
+  $("view_app").classList.remove("hide");
+  $("who").textContent = `Vendedor: ${seller.name}`;
+  $("btnChangeSeller").classList.remove("hide");
+}
+
+$("btnChangeSeller").onclick=()=>{
+  localStorage.removeItem(SELLER_KEY);
+  seller=null;
+  showSellerPick();
+};
+
+function setTabs(){
+  const tabs = [
+    {id:"visita", label:"🧭 Visita"},
+    {id:"meta", label:"🎯 Meta"},
+    {id:"hist", label:"📆 Historial"},
+    {id:"admin", label:"🔒 Admin"}
+  ];
+  $("tabs").innerHTML = "";
+  for(const t of tabs){
+    const el=document.createElement("div");
+    el.className="tab";
+    el.textContent=t.label;
+    el.onclick=()=>openTab(t.id);
+    $("tabs").appendChild(el);
+  }
+  openTab("visita");
+}
+
+function openTab(id){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  [...$("tabs").children].forEach(x=>{
+    const tx=x.textContent;
+    if((tx.includes("Visita") && id==="visita") ||
+       (tx.includes("Meta") && id==="meta") ||
+       (tx.includes("Historial") && id==="hist") ||
+       (tx.includes("Admin") && id==="admin")){
+      x.classList.add("active");
+    }
+  });
+
+  ["visita","meta","hist","admin"].forEach(v=>{
+    const sec=$("view_"+v);
+    if(sec) sec.classList.toggle("hide", v!==id);
+  });
+
+  if(id==="visita") refreshMyVisits();
+  if(id==="meta") refreshMeta();
+  if(id==="hist") loadHist();
+  if(id==="admin") openAdmin();
+}
+
+/* =========================
+   SELLER PICK
+   ========================= */
+function fillSellers(){
+  $("sellerSel").innerHTML =
+    `<option value="">Selecciona…</option>` +
+    SELLERS.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
+}
+
+$("btnUseSeller").onclick=()=>{
+  const id = $("sellerSel").value;
+  if(!id) return alert("Selecciona vendedor.");
+  const found = SELLERS.find(x=>x.id===id);
+  if(!found) return alert("Vendedor inválido.");
+
+  seller = found;
+  saveJSON(SELLER_KEY, seller);
+  bootApp();
+};
+
+/* =========================
+   VISIT FLOW
+   ========================= */
+function clearVisit(){
+  current=null;
+  $("startInfo").textContent="—";
+  $("durInfo").textContent="—";
+  $("btnStart").disabled=false;
+  $("btnEnd").disabled=true;
+  if(timer){ clearInterval(timer); timer=null; }
+}
+
+$("btnClear").onclick=()=>{
+  $("client").value=""; $("reason").value=""; $("comments").value="";
+  clearVisit();
+};
+
+$("btnStart").onclick=async ()=>{
+  const client=$("client").value.trim();
+  const reason=$("reason").value.trim();
+  if(!client) return alert("Escribe el cliente.");
+  if(!reason) return alert("Selecciona el motivo.");
+
+  try{
+    $("btnStart").disabled=true;
+    const g=await getGeo();
+    const start=new Date();
+
+    current={
+      id: "V-"+Date.now()+"-"+Math.random().toString(16).slice(2),
+      created_at: start.toISOString(),
+      seller_id: seller.id,
+      seller_name: seller.name,
+      client_name: client,
+      reason,
+      comments: $("comments").value.trim(),
+      start_ts: start.toISOString(),
+      start_ms: Date.now(),
+      start_lat: g.lat, start_lng: g.lng, start_acc: g.acc,
+      device_id: deviceId()
+    };
+
+    $("startInfo").textContent = `${fmtDT(current.start_ts)} | ±${Math.round(g.acc)}m`;
+    $("btnEnd").disabled=false;
+
+    timer=setInterval(()=>{
+      if(!current) return;
+      const min=Math.max(0, Math.round((Date.now()-current.start_ms)/60000));
+      $("durInfo").textContent = `${min} min`;
+    },1000);
+
+  }catch(e){
+    $("btnStart").disabled=false;
+    alert(e.message);
+  }
+};
+
+$("btnEnd").onclick=async ()=>{
+  if(!current) return;
+  try{
+    $("btnEnd").disabled=true;
+    const g=await getGeo();
+    const end=new Date();
+    const duration_min=Math.max(0, Math.round((Date.now()-current.start_ms)/60000));
+
+    const record={
+      ...current,
+      end_ts: end.toISOString(),
+      duration_min,
+      end_lat: g.lat,
+      end_lng: g.lng,
+      end_acc: g.acc
+    };
+
+    const all = loadJSON(VISITS_KEY, []);
+    all.unshift(record);
+    saveJSON(VISITS_KEY, all);
+
+    alert("✅ Visita guardada.");
+    clearVisit();
+    refreshMyVisits();
+
+  }catch(e){
+    alert(e.message);
+    $("btnEnd").disabled=false;
+  }
+};
+
+function getAllVisits(){
+  return loadJSON(VISITS_KEY, []);
+}
+
+function refreshMyVisits(){
+  const all = getAllVisits().filter(v=>v.seller_id===seller.id);
+  const data = all.slice(0, 15);
+  window.__myVisits = all;
+
+  if(!data.length){
+    $("myVisits").innerHTML = `<div class="mini">Sin visitas.</div>`;
+    return;
+  }
+
+  let html=`<table><thead><tr>
+    <th>Fecha</th><th>Cliente</th><th>Motivo</th><th class="right">Dur</th><th>Mapa</th>
+  </tr></thead><tbody>`;
+
+  data.forEach(r=>{
+    const map = (r.end_lat && r.end_lng) ? `https://www.google.com/maps?q=${r.end_lat},${r.end_lng}` : "";
+    html += `<tr>
+      <td>${fmtDT(r.created_at)}</td>
+      <td>${r.client_name}</td>
+      <td>${r.reason}</td>
+      <td class="right">${r.duration_min ?? ""}</td>
+      <td>${map ? `<a href="${map}" target="_blank" rel="noopener">Ver</a>` : "—"}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  $("myVisits").innerHTML = html;
+}
+
+$("btnMyExcel").onclick=()=>{
+  const rows = (window.__myVisits||[]).filter(v=>v.seller_id===seller.id);
+  exportExcel(`Visitas_${seller.name.replace(/\s+/g,"_")}`, rows);
+};
+
+/* =========================
+   META + SALES (LOCAL)
+   ========================= */
+$("goalMonth").value = monthISO();
+$("saleDate").value = todayISO();
+
+function getGoals(){ return loadJSON(GOALS_KEY, {}); } // { sellerId: { "YYYY-MM-01": goal } }
+function setGoal(sellerId, monthDate, goal){
+  const g = getGoals();
+  g[sellerId] = g[sellerId] || {};
+  g[sellerId][monthDate] = goal;
+  saveJSON(GOALS_KEY, g);
+}
+function getSales(){ return loadJSON(SALES_KEY, {}); } // { sellerId: { "YYYY-MM-DD": {amount,note} } }
+function setSale(sellerId, d, amount, note){
+  const s = getSales();
+  s[sellerId] = s[sellerId] || {};
+  s[sellerId][d] = { amount, note, updated_at: new Date().toISOString() };
+  saveJSON(SALES_KEY, s);
+}
+
+$("btnSaveGoal").onclick=()=>{
+  const m=$("goalMonth").value;
+  const goal=Number($("goalVal").value||0);
+  if(!m) return alert("Selecciona mes.");
+  if(goal<=0) return alert("Meta > 0.");
+  setGoal(seller.id, `${m}-01`, goal);
+  alert("✅ Meta guardada.");
+  refreshMeta();
+};
+
+$("btnSaveSale").onclick=()=>{
+  const d=$("saleDate").value;
+  const amt=Number($("saleAmt").value||0);
+  const note=$("saleNote").value.trim();
+  if(!d) return alert("Selecciona fecha.");
+  setSale(seller.id, d, amt, note);
+  alert("✅ Venta guardada.");
+  $("saleAmt").value=""; $("saleNote").value="";
+  refreshMeta();
+};
+
+$("btnRefreshMeta").onclick=refreshMeta;
+
+$("btnSalesExcel").onclick=()=>{
+  const sales = getSales()[seller.id] || {};
+  const rows = Object.keys(sales).sort().map(d=>({ seller: seller.name, sale_date:d, amount:sales[d].amount, note:sales[d].note }));
+  exportExcel(`Ventas_${seller.name.replace(/\s+/g,"_")}`, rows);
+};
+
+function refreshMeta(){
+  const m=$("goalMonth").value || monthISO();
+  const monthDate = `${m}-01`;
+
+  const goals = getGoals()[seller.id] || {};
+  const goal = Number(goals[monthDate] || 0);
+  if(goal>0) $("goalVal").value = goal;
+
+  const salesMap = getSales()[seller.id] || {};
+  const start = new Date(monthDate);
+  const end = new Date(monthDate); end.setMonth(end.getMonth()+1);
+
+  const rows = [];
+  let sum = 0;
+
+  Object.keys(salesMap).forEach(d=>{
+    const dt = new Date(d+"T00:00:00");
+    if(dt>=start && dt<end){
+      const amount = Number(salesMap[d].amount||0);
+      sum += amount;
+      rows.push({ sale_date:d, amount, note:salesMap[d].note||"" });
+    }
+  });
+
+  rows.sort((a,b)=>a.sale_date.localeCompare(b.sale_date));
+  window.__salesRows = rows;
+
+  const pct = goal>0 ? Math.min(100, (sum/goal)*100) : 0;
+  const falt = goal>0 ? Math.max(0, goal-sum) : 0;
+
+  $("metaSummary").innerHTML = goal>0
+    ? `Vendido: <b>$${fmtNum(sum)}</b> de <b>$${fmtNum(goal)}</b> — Avance: <b>${pct.toFixed(1)}%</b> — Falta: <b>$${fmtNum(falt)}</b>`
+    : `Aún no has guardado meta para este mes.`;
+
+  $("metaBar").style.width = pct + "%";
+
+  if(!rows.length){
+    $("salesTable").innerHTML = `<div class="mini">Sin ventas capturadas en el mes.</div>`;
+    return;
+  }
+
+  let html=`<table><thead><tr><th>Fecha</th><th class="right">Venta</th><th>Nota</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    html += `<tr><td>${r.sale_date}</td><td class="right">$${fmtNum(r.amount)}</td><td>${r.note||""}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  $("salesTable").innerHTML = html;
+}
+
+/* =========================
+   HISTORIAL RANGO
+   ========================= */
+$("histFrom").value = todayISO();
+$("histTo").value = todayISO();
+
+$("btnLoadHist").onclick=loadHist;
+
+$("btnHistExcel").onclick=()=>{
+  exportExcel(`Historial_${seller.name.replace(/\s+/g,"_")}`, window.__histRows || []);
+};
+
+function loadHist(){
+  const from=$("histFrom").value;
+  const to=$("histTo").value;
+  const toD=new Date(to); toD.setDate(toD.getDate()+1);
+
+  const all = getAllVisits().filter(v=>v.seller_id===seller.id);
+  const rows = all.filter(r=>{
+    const dt = new Date(r.created_at);
+    return dt >= new Date(from) && dt < toD;
+  });
+
+  window.__histRows = rows;
+
+  if(!rows.length){
+    $("histTable").innerHTML = `<div class="mini">Sin registros.</div>`;
+    return;
+  }
+
+  let html=`<table><thead><tr>
+    <th>Fecha</th><th>Cliente</th><th>Motivo</th><th class="right">Dur</th><th>Mapa</th>
+  </tr></thead><tbody>`;
+
+  rows.slice(0,200).forEach(r=>{
+    const map=(r.end_lat && r.end_lng) ? `https://www.google.com/maps?q=${r.end_lat},${r.end_lng}` : "";
+    html += `<tr>
+      <td>${fmtDT(r.created_at)}</td>
+      <td>${r.client_name}</td>
+      <td>${r.reason}</td>
+      <td class="right">${r.duration_min ?? ""}</td>
+      <td>${map ? `<a href="${map}" target="_blank" rel="noopener">Ver</a>` : "—"}</td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table>`;
+  $("histTable").innerHTML=html;
+}
+
+/* =========================
+   ADMIN IMPORT
+   ========================= */
+$("btnAdminLock").onclick=()=>{
+  adminUnlocked=false;
+  alert("Admin bloqueado.");
+  openTab("visita");
+};
+
+function openAdmin(){
+  if(!adminUnlocked){
+    const pin = prompt("PIN Admin:");
+    if(!pin) { openTab("visita"); return; }
+    if(pin !== ADMIN_PIN){
+      alert("PIN incorrecto.");
+      openTab("visita");
+      return;
+    }
+    adminUnlocked = true;
+    alert("✅ Admin habilitado.");
+  }
+  renderAdmin();
+}
+
+$("adminFiles").addEventListener("change", async (ev)=>{
+  const files = Array.from(ev.target.files || []);
+  if(!files.length) return;
+
+  const imported = [];
+  for(const f of files){
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf, { type:"array" });
+    const firstSheet = wb.SheetNames[0];
+    const ws = wb.Sheets[firstSheet];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
+    // esperamos filas de visitas (si hay mezcla, igual las muestra)
+    rows.forEach(r=>{
+      r.__source_file = f.name;
+      imported.push(r);
+    });
+  }
+
+  adminImported = adminImported.concat(imported);
+
+  $("kLast").textContent = new Date().toLocaleTimeString("es-MX");
+  renderAdmin();
+});
+
+$("btnAdminClear").onclick=()=>{
+  adminImported = [];
+  $("adminFiles").value = "";
+  renderAdmin();
+};
+
+$("btnAdminExport").onclick=()=>{
+  if(!adminImported.length) return alert("No hay datos importados.");
+  exportExcel("Consolidado_Visitas", adminImported);
+};
+
+function renderAdmin(){
+  const data = adminImported.slice().sort((a,b)=>{
+    const da = new Date(a.created_at || a.Fecha || 0).getTime();
+    const db = new Date(b.created_at || b.Fecha || 0).getTime();
+    return db-da;
+  });
+
+  $("kCount").textContent = data.length;
+
+  // promedio duración si existe duration_min
+  const durs = data.map(x=>Number(x.duration_min || x.Dur || 0)).filter(n=>n>0);
+  const avg = durs.length ? (durs.reduce((a,b)=>a+b,0)/durs.length) : 0;
+  $("kAvg").textContent = durs.length ? avg.toFixed(1)+" min" : "—";
+
+  if(!data.length){
+    $("adminTable").innerHTML = `<div class="mini">Importa archivos para ver datos.</div>`;
+    return;
+  }
+
+  let html=`<table><thead><tr>
+    <th>Fecha</th><th>Vendedor</th><th>Cliente</th><th>Motivo</th><th class="right">Dur</th><th>Archivo</th>
+  </tr></thead><tbody>`;
+
+  data.slice(0,300).forEach(r=>{
+    const fecha = r.created_at ? fmtDT(r.created_at) : (r.Fecha || "");
+    const vend  = r.seller_name || r.Vendedor || r.seller || "";
+    const cli   = r.client_name || r.Cliente || "";
+    const mot   = r.reason || r.Motivo || "";
+    const dur   = r.duration_min || r.Dur || "";
+    html += `<tr>
+      <td>${fecha}</td>
+      <td>${vend}</td>
+      <td>${cli}</td>
+      <td>${mot}</td>
+      <td class="right">${dur}</td>
+      <td>${r.__source_file || ""}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  $("adminTable").innerHTML = html;
+}
+
+/* =========================
+   BOOT
+   ========================= */
+function bootApp(){
+  showApp();
+  setTabs();
+  clearVisit();
+  refreshMyVisits();
+  refreshMeta();
+  loadHist();
+}
+
+function boot(){
+  fillSellers();
+
+  const saved = loadJSON(SELLER_KEY, null);
+  if(saved?.id && saved?.name){
+    seller = saved;
+    bootApp();
+    return;
+  }
+  showSellerPick();
+}
+
+boot();
+</script>
+
+<script>
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  }
+</script>
+
+</body>
+</html>
