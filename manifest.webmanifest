@@ -1,6 +1,6 @@
 {
-  "name": "Toyo - Visitas",
-  "short_name": "ToyoVisitas",
+  "name": "Toyo - Seguimiento Lite",
+  "short_name": "ToyoLite",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -8,3 +8,4 @@
   "theme_color": "#0046BE",
   "icons": []
 }
+
