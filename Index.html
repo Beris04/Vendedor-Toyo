@@ -298,8 +298,22 @@ const ADMIN_PIN = "726819";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id)=>document.getElementById(id);
 
-function setNet(){ $("net").textContent = navigator.onLine ? "Online" : "Offline"; }
-addEventListener("online", setNet); addEventListener("offline", setNet); setNet();
+async function updateConnStatus(){
+  try{
+    const { error } = await sb.from("toyo_sellers").select("id").limit(1);
+    if(error) throw error;
+
+    $("net").textContent = "Online";
+    $("apiStatus").innerHTML = `<span class="ok">OK</span>`;
+  }catch(e){
+    $("net").textContent = "Offline";
+    $("apiStatus").innerHTML = `<span class="err">FAIL</span>`;
+  }
+}
+
+// actualiza al abrir y cada 15s
+updateConnStatus();
+setInterval(updateConnStatus, 15000);;
 
 function todayISO(){
   const d=new Date(); const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0");
