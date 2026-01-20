@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>App Visitas — Seguimiento de Vendedores</title>
+
+  <!-- Leaflet (mapa) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root{
+      --bg:#f5f6f8;
+      --panel:#ffffff;
+      --panel2:#ffffff;
+      --stroke:rgba(15,23,42,.10);
+      --muted:rgba(15,23,42,.60);
+      --text:rgba(15,23,42,.92);
+      --accent:#6d28d9; /* purple */
+      --ok:#10b981;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --shadow: 0 18px 50px rgba(15,23,42,.10);
+      --shadow2: 0 10px 28px rgba(15,23,42,.08);
+      --radius:18px;
+      --radius2:14px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:
+      radial-gradient(1200px 600px at 10% 0%, rgba(109,40,217,.10), transparent 55%),
+      radial-gradient(900px 500px at 90% 10%, rgba(16,185,129,.08), transparent 55%),
+      radial-gradient(900px 500px at 50% 120%, rgba(59,130,246,.08), transparent 55%),
+      var(--bg);
+      color:var(--text);
+      font-family:var(--font);
+      line-height:1.35;
+    }
+    a{color:inherit;text-decoration:none}
+    .app{
+      max-width:1280px;
+      margin:0 auto;
+      padding:18px 18px 28px;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:14px 16px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 12px;
+      backdrop-filter: blur(10px);
+      z-index: 50;
+      overflow: visible;
+}
+    .brand{
+      display:flex;align-items:center;gap:12px;min-width: 240px;
+    }
+    .logo{
+      width:38px;height:38px;border-radius: 12px;
+      background: linear-gradient(135deg, rgba(109,40,217,.95), rgba(59,130,246,.80));
+      box-shadow: 0 10px 26px rgba(124,58,237,.22);
+    }
+    .brand h1{
+      margin:0;font-size:14px;font-weight:700;letter-spacing:.2px;
+    }
+    .brand p{
+      margin:2px 0 0;color:var(--muted);font-size:12px;
+    }
+    .nav{
+      display:flex;align-items:center;gap:10px;
+      justify-content:flex-end;
+      flex-wrap:nowrap;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:2px;
+    }
+    .nav::-webkit-scrollbar{display:none}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 14px;
+      border-radius: 999px;
+      border:1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.85);
+      cursor:pointer;
+      user-select:none;
+      font-size:13px;
+      white-space:nowrap;
+      color: rgba(15,23,42,.86);
+      transition: transform .06s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      box-shadow: 0 6px 16px rgba(15,23,42,.06);
+    }
+    .pill:hover{transform: translateY(-1px); background: rgba(255,255,255,.95); border-color: rgba(15,23,42,.16);}
+    .pill.active{background: rgba(109,40,217,.12); border-color: rgba(109,40,217,.35); box-shadow: 0 10px 22px rgba(109,40,217,.10);}
+    .pill .dot{width:8px;height:8px;border-radius:999px;background: rgba(15,23,42,.35)}
+    .pill.active .dot{background: rgba(109,40,217,.85)}
+    .pill.admin{background: rgba(255,255,255,.85)}
+    .pill.admin.active{background: rgba(16,185,129,.10); border-color: rgba(16,185,129,.35)}
+    .content{
+      margin-top:18px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr; /* mobile-first */
+      gap:16px;
+    }
+    @media (min-width: 980px){
+      .grid{grid-template-columns: 420px 1fr;}
+      .topbar{position: sticky;}
+    }
+    @media (max-width: 980px){
+      .brand{min-width: unset;}
+      .topbar{position: static;}
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 16px;
+      border-bottom:1px solid var(--stroke);
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    .card .hd h2{margin:0;font-size:14px;font-weight:700}
+    .card .hd .sub{margin:0;color:var(--muted);font-size:12px}
+    .card .bd{padding:14px 16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > *{flex:1}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input, select, textarea{
+      width:100%;
+      padding:11px 12px;
+      border-radius: 12px;
+      border:1px solid rgba(15,23,42,.14);
+      background: rgba(255,255,255,.95);
+      color: rgba(15,23,42,.92);
+      outline:none;
+      font-size:16px; /* evita zoom en iPhone */
+      box-shadow: 0 6px 16px rgba(15,23,42,.06);
+    }
+    input:focus, select:focus, textarea:focus{border-color: rgba(109,40,217,.45); box-shadow: 0 0 0 4px rgba(109,40,217,.12);}
+    textarea{min-height:82px; resize: vertical;}
+    .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:12px 14px;
+      min-height:44px;
+      border-radius: 14px;
+      border:1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.92);
+      color: rgba(15,23,42,.92);
+      cursor:pointer;
+      user-select:none;
+      font-weight:750;
+      font-size:13.5px;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      box-shadow: 0 8px 20px rgba(15,23,42,.08);
+    }
+    .btn:focus{outline:none; box-shadow: 0 0 0 4px rgba(109,40,217,.14), 0 8px 22px rgba(15,23,42,.10);}
+    .btn:disabled{opacity:.55; cursor:not-allowed; filter:saturate(.85);}
+    .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20);}
+    .btn.primary{
+      background: rgba(109,40,217,.92);
+      border-color: rgba(109,40,217,.35);
+      color: #fff;
+      box-shadow: 0 14px 28px rgba(109,40,217,.18);
+    }
+    .btn.primary:hover{background: rgba(109,40,217,.98);}
+    .btn.good{
+      background: rgba(16,185,129,.12);
+      border-color: rgba(16,185,129,.28);
+      color: rgba(15,23,42,.92);
+    }
+    .btn.danger{
+      background: rgba(239,68,68,.10);
+      border-color: rgba(239,68,68,.26);
+      color: rgba(15,23,42,.92);
+    }
+    .btn.ghost{
+      background: rgba(15,23,42,.04);
+      border-color: rgba(15,23,42,.10);
+      box-shadow: none;
+    }
+    .btn.small{padding:9px 11px;border-radius: 12px;font-size:12.5px; min-height:40px}
+    .muted{color:var(--muted)}
+    .kpi{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+      padding:10px 12px;border-radius: 14px;
+      border:1px solid rgba(15,23,42,.10);
+      background: rgba(15,23,42,.02);
+    }
+    .kpi strong{font-size:14px}
+    .kpi span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+    .kpi .value{font-size:16px;font-weight:800}
+    .hr{height:1px;background: var(--stroke); margin:12px 0}
+    .tablewrap{overflow:auto}
+    table{
+      width:100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+    th, td{
+      padding:10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      font-size: 12.5px;
+      vertical-align: top;
+    }
+    th{
+      text-align:left;
+      color: rgba(255,255,255,.72);
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      background: rgba(11,15,23,.92);
+      backdrop-filter: blur(8px);
+      z-index: 2;
+    }
+    td .tag{
+      display:inline-flex;align-items:center;
+      padding:4px 8px;border-radius:999px;
+      border:1px solid rgba(15,23,42,.12);
+      background: rgba(15,23,42,.04);
+      font-size:12px;color: rgba(15,23,42,.80);
+      white-space:nowrap;
+    }
+    .tag.good{border-color: rgba(16,185,129,.25); background: rgba(16,185,129,.10); color: rgba(15,23,42,.85);}
+    .tag.warn{border-color: rgba(245,158,11,.25); background: rgba(245,158,11,.10); color: rgba(15,23,42,.85);}
+    .tag.bad{border-color: rgba(239,68,68,.28); background: rgba(239,68,68,.10); color: rgba(15,23,42,.85);}
+    .twoCol{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 980px){
+      table{min-width: 720px;}
+      .twoCol{grid-template-columns: 1fr;}
+    }
+    .toast{
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      min-width: 280px;
+      max-width: 360px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.92);
+      border-radius: 16px;
+      padding: 12px 12px;
+      box-shadow: var(--shadow2);
+      display:none;
+      z-index: 99;
+    }
+    .toast.show{display:block; animation: pop .18s ease;}
+    @keyframes pop { from { transform: translateY(8px); opacity:.2 } to { transform: translateY(0); opacity:1 } }
+    .toast .t{font-weight:800;font-size:13px;margin:0}
+    .toast .m{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+    .map{
+      width:100%;
+      height: 360px;
+      border-radius: var(--radius);
+      overflow:hidden;
+      border:1px solid rgba(15,23,42,.10);
+    }
+    .footerNote{
+      margin-top: 10px;
+      color: rgba(15,23,42,.55);
+      font-size: 12px;
+    }
+    .inlineHint{
+      display:flex;gap:10px;align-items:flex-start;
+      padding:10px 12px;border-radius: 14px;
+      border:1px dashed rgba(15,23,42,.16);
+      background: rgba(255,255,255,.70);
+      color: rgba(15,23,42,.80);
+      font-size:12.5px;
+    }
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .hide{display:none !important}
+
+    @media (max-width: 980px){
+      .btnbar{
+        position: sticky;
+        bottom: 10px;
+        background: rgba(255,255,255,.85);
+        border: 1px solid rgba(15,23,42,.12);
+        backdrop-filter: blur(10px);
+        padding: 10px;
+        border-radius: 16px;
+        z-index: 5;
+      }
+      .btn{flex:1; font-size:14px; min-height:48px;}
+      .map{height: 300px;}
+      table{min-width: 760px;}
+    }
+
+  
+    /* Mobile-first: cards view for history (better than wide tables) */
+    .cards{display:none; gap:10px; flex-direction:column;}
+    .cardItem{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.92);
+      border-radius: 16px;
+      padding: 12px 12px;
+    }
+    .cardItemTop{
+      display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+    }
+    .cardItemTitle{
+      font-weight:800; font-size:14px; margin:0;
+    }
+    .cardItemMeta{
+      color: var(--muted); font-size:12.5px; margin-top:3px;
+    }
+    .cardItemRight{
+      text-align:right; white-space:nowrap;
+    }
+    .cardItemRight .dur{
+      display:inline-flex; padding:5px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      font-weight:800; font-size:12.5px;
+    }
+    .cardItemBottom{
+      margin-top:10px;
+      display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    }
+    .cardItemNotes{
+      margin-top:10px;
+      color: rgba(15,23,42,.88);
+      font-size:13px;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+    .locMini{font-size:12px; color: var(--muted);}
+    @media (max-width: 900px){
+      /* Hide wide tables on mobile and show cards */
+      #page-city .tablewrap, #page-admin .tablewrap{display:none;}
+      #page-city .cards, #page-admin .cards{display:flex;}
+      .map{height: 260px;}
+      .content{padding-bottom: 22px;}
+    }
+
+  
+    @supports(padding: max(0px)){
+      @media (max-width: 980px){
+        .btnbar{bottom: max(10px, env(safe-area-inset-bottom));}
+      }
+    }
+
+  
+    /* Mobile fix: city pills were getting clipped in the top bar */
+    @media (max-width: 560px){
+      .topbar .inner{
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .brand{width:100%;}
+      .nav{
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+      }
+      .nav::-webkit-scrollbar{display:none}
+      .pill{flex: 0 0 auto;}
+    }
+
+  
+    /* Mobile: route dropdown (Apple/Notion style) */
+    .routeSelect{
+      display:none;
+      width:100%;
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.92);
+      color: rgba(15,23,42,.92);
+      font-weight:800;
+      box-shadow: 0 8px 18px rgba(15,23,42,.08);
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    @media (max-width: 560px){
+      .nav{overflow: visible; padding-bottom: 0;}
+      .nav .pill{display:none;}
+      .routeSelect{display:block;}
+    }
+
+  
+/* ===== Admin PIN ===== */
+.pinOverlay{position:fixed;inset:0;z-index:999999;background:rgba(2,6,23,.52);display:none;align-items:center;justify-content:center;padding:16px;}
+.pinModal{width:min(420px,100%);border-radius:22px;background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.40);box-shadow:0 28px 70px rgba(2,6,23,.35);overflow:hidden}
+.pinModal .hd{padding:14px 16px;border-bottom:1px solid rgba(15,23,42,.10)}
+.pinModal .hd h3{margin:0;font-size:14px}
+.pinModal .hd p{margin:4px 0 0;font-size:12px;opacity:.75}
+.pinModal .bd{padding:14px 16px}
+.pinModal .ft{padding:12px 16px;border-top:1px solid rgba(15,23,42,.10);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.fabAdmin{position:fixed;right:14px;z-index:99999;border:0;border-radius:999px;padding:12px 14px;font-weight:900;box-shadow:0 10px 25px rgba(0,0,0,.12);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);display:none}
+.fabAdmin:active{transform:translateY(1px)}
+
+</style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>App de Visitas (vendedores) · BUILD PIN+CIUDADES</h1>
+          <p>Un solo <span class="mono">index.html</span> para GitHub Pages · registro con tiempo y ubicación</p>
+        </div>
+      </div>
+
+      <div class="nav">
+          <select id="routeSelectMobile" class="routeSelect" aria-label="Seleccionar ciudad o Admin"></select>
+<div class="pill" data-route="#/gdl"><span class="dot"></span>Guadalajara</div>
+        <div class="pill" data-route="#/mty"><span class="dot"></span>Monterrey</div>
+        <div class="pill" data-route="#/cdmx"><span class="dot"></span>México</div>
+        <div class="pill admin" data-route="#/admin"><span class="dot"></span>Admin</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- CIUDAD PAGE -->
+      <section id="page-city" class="grid">
+        <!-- Left: Registro -->
+        <div class="card">
+          <div class="hd">
+            <div>
+              <h2 id="cityTitle">Ciudad</h2>
+              <p class="sub" id="citySub">Registro de visitas del día</p>
+            </div>
+            <button class="btn small ghost" id="btnDemo">Cargar ejemplo</button>
+          </div>
+          <div class="bd">
+            <div class="inlineHint">
+              <div>✅</div>
+              <div>
+                <div style="font-weight:800">Flujo rápido</div>
+                <div>Selecciona vendedor → escribe cliente → elige tipo → <b>Iniciar</b> → al terminar <b>Terminar</b> (guarda tiempo + ubicación).</div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="twoCol">
+              <div>
+                <label>Vendedor</label>
+                <select id="vendorSelect"></select>
+              </div>
+              <div>
+                <label>Fecha (para ver historial)</label>
+                <input id="datePick" type="date" />
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label>Cliente a visitar</label>
+              <input id="clientInput" placeholder="Ej. Sushi Beto" />
+            </div>
+
+            <div style="margin-top:10px">
+              <label>Selección de visita</label>
+              <select id="typeSelect"></select>
+            </div>
+
+            <div style="margin-top:10px">
+              <label>Comentarios</label>
+              <textarea id="notesInput" placeholder="Ej. Se dejó propuesta de nuevos productos, revisar potencialidad…"></textarea>
+            </div>
+
+            <div class="btnbar">
+              <button class="btn primary" id="btnStart">Iniciar visita</button>
+              <button class="btn danger" id="btnEnd">Terminar visita</button>
+              <button class="btn" id="btnLocation">Actualizar ubicación</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="kpi">
+              <div>
+                <strong>Visita en curso</strong>
+                <span id="activeSummary" class="muted">No hay visita activa.</span>
+              </div>
+              <div class="value" id="activeTimer">—</div>
+            </div>
+
+            <div class="footerNote" id="geoNote">
+              Nota: Para capturar ubicación, el navegador pedirá permiso. En GitHub Pages funciona por HTTPS.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Historial + Mapa -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="hd">
+              <div>
+                <h2>Historial</h2>
+                <p class="sub">Visitas registradas (según fecha seleccionada)</p>
+              </div>
+              <div class="row" style="justify-content:flex-end">
+                <button class="btn small" id="btnExportCity">Exportar CSV</button>
+                <button class="btn small ghost" id="btnClearDay">Borrar este día</button>
+              </div>
+            </div>
+            <div class="bd">
+              <div id="cityKPIs" class="row" style="margin-bottom:10px"></div>
+              <div id="cityCards" class="cards"></div>
+              <div class="tablewrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Inicio</th>
+                      <th>Fin</th>
+                      <th>Duración</th>
+                      <th>Vendedor</th>
+                      <th>Cliente</th>
+                      <th>Tipo</th>
+                      <th>Comentarios</th>
+                      <th>Ubicación</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cityTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="hd">
+              <div>
+                <h2>Mapa del día</h2>
+                <p class="sub">Marcadores por visita (inicio) y trazo de ruta (aprox.)</p>
+              </div>
+              <button class="btn small" id="btnFitCity">Centrar mapa</button>
+            </div>
+            <div class="bd">
+              <div id="mapCity" class="map"></div>
+              <div class="footerNote">Si no se otorgó permiso de ubicación, el mapa mostrará solo los registros con coordenadas.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN PAGE -->
+      <section id="page-admin" class="hide">
+        <div class="card">
+          <div class="hd">
+            <div>
+              <h2>Panel Admin</h2>
+              <p class="sub">Mapa + comentarios + clientes visitados · filtra por ciudad, vendedor y fechas</p>
+            </div>
+            <div class="row" style="justify-content:flex-end">
+              <button class="btn small" id="btnExportAdmin">Exportar CSV</button>
+              <button class="btn small ghost" id="btnResetAll">Reset total</button>
+            </div>
+          </div>
+
+          <div class="bd">
+            <div class="twoCol">
+              <div>
+                <label>Ciudad</label>
+                <select id="adminCity"></select>
+              </div>
+              <div>
+                <label>Vendedor</label>
+                <select id="adminVendor"></select>
+              </div>
+            </div>
+
+            <div class="twoCol" style="margin-top:10px">
+              <div>
+                <label>Desde</label>
+                <input id="adminFrom" type="date" />
+              </div>
+              <div>
+                <label>Hasta</label>
+                <input id="adminTo" type="date" />
+              </div>
+            </div>
+
+            <div class="btnbar">
+              <button class="btn good" id="btnApplyAdmin">Aplicar filtros</button>
+              <button class="btn" id="btnTodayAdmin">Hoy</button>
+              <button class="btn" id="btn7dAdmin">Últimos 7 días</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="row">
+              <div class="kpi">
+                <div><strong>Registros</strong><span class="muted">en el rango</span></div>
+                <div class="value" id="kpiCount">0</div>
+              </div>
+              <div class="kpi">
+                <div><strong>Horas</strong><span class="muted">tiempo total (sumado)</span></div>
+                <div class="value" id="kpiHours">0.0</div>
+              </div>
+              <div class="kpi">
+                <div><strong>Clientes</strong><span class="muted">distintos</span></div>
+                <div class="value" id="kpiClients">0</div>
+              </div>
+            </div>
+
+            <div class="row" id="kpiCityRow">
+              <div class="kpi">
+                <div><strong>Guadalajara</strong><span class="muted">registros</span></div>
+                <div class="value" id="kpiGDL">0</div>
+              </div>
+              <div class="kpi">
+                <div><strong>Monterrey</strong><span class="muted">registros</span></div>
+                <div class="value" id="kpiMTY">0</div>
+              </div>
+              <div class="kpi">
+                <div><strong>México</strong><span class="muted">registros</span></div>
+                <div class="value" id="kpiCDMX">0</div>
+              </div>
+            </div>
+
+            <div class="btnbar" id="adminCityQuick" style="margin-top:10px">
+              <button class="btn" data-city="ALL">Todas</button>
+              <button class="btn" data-city="GDL">GDL</button>
+              <button class="btn" data-city="MTY">MTY</button>
+              <button class="btn" data-city="CDMX">México</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="card" style="box-shadow:none;background:transparent;border:1px solid rgba(255,255,255,.10)">
+              <div class="hd" style="border-bottom:1px solid rgba(255,255,255,.10)">
+                <div>
+                  <h2>Mapa</h2>
+                  <p class="sub">Marcadores por visita (inicio)</p>
+                </div>
+                <button class="btn small" id="btnFitAdmin">Centrar mapa</button>
+              </div>
+              <div class="bd">
+                <div id="mapAdmin" class="map"></div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="card" style="box-shadow:none;background:transparent;border:1px solid rgba(255,255,255,.10)">
+              <div class="hd" style="border-bottom:1px solid rgba(255,255,255,.10)">
+                <div>
+                  <h2>Historial detallado</h2>
+                  <p class="sub">Clientes visitados, tipo, comentarios, tiempo y ubicación</p>
+                </div>
+              </div>
+              <div class="bd">
+                <div id="adminCards" class="cards"></div>
+                <div class="tablewrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Ciudad</th>
+                        <th>Vendedor</th>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>Inicio</th>
+                        <th>Fin</th>
+                        <th>Duración</th>
+                        <th>Comentarios</th>
+                        <th>Ubicación</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="card" style="box-shadow:none;background:transparent;border:1px solid rgba(255,255,255,.10)">
+              <div class="hd" style="border-bottom:1px solid rgba(255,255,255,.10)">
+                <div>
+                  <h2>Ajustes</h2>
+                  <p class="sub">Nombres de vendedores (editable) · se guarda en el navegador</p>
+                </div>
+              </div>
+              <div class="bd">
+                <div class="twoCol">
+                  <div>
+                    <label>Zona (para editar vendedores)</label>
+                    <select id="vendorsCityPick"></select>
+                  </div>
+                  <div>
+                    <label>Nota</label>
+                    <input value="Se guarda en este navegador" disabled />
+                  </div>
+                </div>
+
+                <div style="margin-top:10px">
+                  <label>Vendedores de la zona (uno por línea)</label>
+                  <textarea id="vendorsText" style="min-height:160px"></textarea>
+                </div>
+
+                <div class="btnbar">
+                  <button class="btn primary" id="btnSaveVendors">Guardar vendedores</button>
+                  <button class="btn" id="btnRestoreVendors">Restaurar default</button>
+                </div>
+                <div class="footerNote">Tip: Para consolidar entre teléfonos (multi-dispositivo), se requiere nube (Sheets/Firebase). Esta versión guarda local.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div id="toast" class="toast">
+    <p class="t" id="toastT">Listo</p>
+    <p class="m" id="toastM">—</p>
+  </div>
+
+<script>
+/* =========================
+   APP VISITAS - SINGLE FILE
+   + Supabase (Admin ve todos)
+   ========================= */
+
+const STORAGE_KEY = "app_visitas_v3";
+
+/* ===== Admin PIN (local) ===== */
+const PIN_HASH_KEY = "app_visitas_admin_pin_hash_v1";
+const UNLOCK_UNTIL_KEY = "app_visitas_admin_unlock_until_v1";
+const ADMIN_DEFAULT_PIN = "1234";
+
+async function sha256Hex(msg){
+  const enc = new TextEncoder().encode(msg);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function ensureDefaultPin(){
+  if(localStorage.getItem(PIN_HASH_KEY)) return;
+  localStorage.setItem(PIN_HASH_KEY, await sha256Hex(ADMIN_DEFAULT_PIN));
+}
+function isAdminUnlocked(){
+  return Date.now() < parseInt(sessionStorage.getItem(UNLOCK_UNTIL_KEY) || "0", 10);
+}
+function unlockAdmin(minutes=180){
+  sessionStorage.setItem(UNLOCK_UNTIL_KEY, String(Date.now() + minutes*60*1000));
+}
+function lockAdmin(){
+  sessionStorage.removeItem(UNLOCK_UNTIL_KEY);
+}
+const elPinOverlay = document.getElementById("adminPinOverlay");
+const elPinInput = document.getElementById("adminPinInput");
+const elPinCancel = document.getElementById("adminPinCancel");
+const elPinUnlock = document.getElementById("adminPinUnlock");
+const elPinErr = document.getElementById("adminPinErr");
+const elAdminLockFab = document.getElementById("adminLockFab");
+const elAdminChangePinFab = document.getElementById("adminChangePinFab");
+let lastNonAdminRoute = "#/gdl";
+
+function showPinModal(show){
+  if(!elPinOverlay) return;
+  elPinOverlay.style.display = show ? "flex" : "none";
+  elPinOverlay.setAttribute("aria-hidden", show ? "false" : "true");
+  if(elPinErr) elPinErr.style.display = "none";
+  if(show && elPinInput){
+    elPinInput.value = "";
+    setTimeout(()=>elPinInput.focus(), 120);
+  }
+}
+async function tryUnlockWithPin(pin){
+  const saved = localStorage.getItem(PIN_HASH_KEY) || "";
+  const h = await sha256Hex((pin||"").trim());
+  return (h && saved && h === saved);
+}
+async function changePinFlow(){
+  const p = prompt("Nuevo PIN (mínimo 4 dígitos):");
+  if(!p) return;
+  const pin = p.trim();
+  if(pin.length < 4){ toast("PIN", "Mínimo 4 dígitos"); return; }
+  localStorage.setItem(PIN_HASH_KEY, await sha256Hex(pin));
+  toast("PIN", "Actualizado");
+}
+/* =========================== */
+
+
+/* =========================
+   CONFIG SUPABASE (PEGA AQUI)
+   ========================= */
+// Ejemplo: https://xxxx.supabase.co
+const SUPABASE_URL = "PEGA_AQUI_TU_PROJECT_URL";
+// anon key (publishable)
+const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_ANON_KEY";
+// tabla
+const SUPABASE_TABLE = "visits";
+/* ========================= */
+
+const DEFAULT_VENDORS_BY_CITY = {
+  "CDMX": [
+    "David Adrian Hernández Guzmán",
+    "Javier Espinosa Olivares",
+    "Ricardo Gutierrez Bandera",
+    "Abraham Rene Valdes Gonzales",
+    "Jesus Antonio Ramirez Rivera",
+    "Sergio Servin Rivera",
+    "Eduardo Faustino Hernandez Sanchez",
+    "Andres Fierro Ibañez",
+    "Tohru Kurasawa",
+    "Tanno Nobuko"
+  ],
+  "MTY": [
+    "Jessica Palomo",
+    "Luis Heredia",
+    "Carla Hernández"
+  ],
+  "GDL": [
+    "Aguilar Neri Daniel",
+    "De la Cruz Ponce Julio Cesar",
+    "Garibay Ortiz Sergio Joel",
+    "Sierra de Anda Aldo",
+    "Perez Mar Alan Roberto",
+    "Reynoso Aguilar Maricela",
+    "Sandra Navarro Navarro",
+    "Aguirre Ojeda Arcenio",
+    "Velez Castellanos Antonio",
+    "Yepez Mora Oscar Alberto",
+    "Sanchez Esmeralda",
+    "Reynaga Valeria",
+    "González Guzmán Cristian Eduardo"
+  ]
+};
+
+const VISIT_TYPES = [
+  "Degustación",
+  "Entrega de faltantes",
+  "Entrega de nuevos productos",
+  "Visita Potencialidad",
+  "Visita de Seguimiento",
+  "Cobranza"
+];
+
+const CITIES = [
+  { id:"gdl", label:"Guadalajara", code:"GDL" },
+  { id:"mty", label:"Monterrey", code:"MTY" },
+  { id:"cdmx", label:"México", code:"CDMX" }
+];
+
+/** Helpers */
+const $  = (sel)=>document.querySelector(sel);
+const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+function toast(title, msg){
+  const t = $("#toast");
+  if(!t) return;
+  $("#toastT").textContent = title || "Listo";
+  $("#toastM").textContent = msg || "—";
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove("show"), 3200);
+}
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+function localDateKey(d=new Date()){
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+function fmtTime(ts){
+  if(!ts) return "—";
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+function fmtDate(ts){
+  if(!ts) return "—";
+  const d = new Date(ts);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+function fmtDur(sec){
+  if(!isFinite(sec) || sec<=0) return "—";
+  const s = Math.floor(sec);
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const ss = s%60;
+  if(h>0) return `${h}h ${m}m`;
+  if(m>0) return `${m}m ${ss}s`;
+  return `${ss}s`;
+}
+function uuid(){
+  return (crypto?.randomUUID?.() ?? `id_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+}
+function safeText(s){ return (s ?? "").toString(); }
+function escapeHtml(str){
+  return safeText(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function durTag(sec){
+  if(!sec) return "";
+  if(sec >= 60*45) return "warn";
+  if(sec >= 60*20) return "good";
+  if(sec <= 60*5)  return "bad";
+  return "";
+}
+function normalizeCityValue(v){
+  const s = (v ?? "").toString().trim();
+  const u = s.toUpperCase();
+  if(!u) return "";
+  if(u === "GDL" || u.includes("GUADALAJARA")) return "GDL";
+  if(u === "MTY" || u.includes("MONTERREY")) return "MTY";
+  if(u === "CDMX" || u.includes("MEXICO") || u.includes("MÉXICO")) return "CDMX";
+  return u;
+}
+function cityLabel(code){
+  const c = normalizeCityValue(code);
+  const meta = CITIES.find(x=>x.code===c);
+  return meta ? meta.label : (code || "—");
+}
+function cityDefaultCenter(cityId){
+  if(cityId==="gdl") return [20.6736, -103.344];
+  if(cityId==="mty") return [25.6866, -100.3161];
+  if(cityId==="cdmx") return [19.4326, -99.1332];
+  return [23.6345, -102.5528];
+}
+
+/** State */
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{
+      const obj = JSON.parse(raw);
+      obj.records = Array.isArray(obj.records) ? obj.records : [];
+      obj.pending = Array.isArray(obj.pending) ? obj.pending : [];
+      obj.active  = obj.active ?? null;
+      obj.lastVendorByCity = obj.lastVendorByCity ?? {};
+      obj.vendorsByCity = obj.vendorsByCity ?? {};
+      ["CDMX","MTY","GDL"].forEach(code=>{
+        if(!Array.isArray(obj.vendorsByCity[code]) || obj.vendorsByCity[code].length===0){
+          obj.vendorsByCity[code] = (DEFAULT_VENDORS_BY_CITY[code] || []).slice();
+        }
+      });
+      return obj;
+    }catch(e){}
+  }
+  return {
+    vendorsByCity: {
+      "CDMX": (DEFAULT_VENDORS_BY_CITY["CDMX"] || []).slice(),
+      "MTY":  (DEFAULT_VENDORS_BY_CITY["MTY"]  || []).slice(),
+      "GDL":  (DEFAULT_VENDORS_BY_CITY["GDL"]  || []).slice()
+    },
+    records: [],
+    pending: [],
+    active: null,
+    lastVendorByCity: {}
+  };
+}
+let state = loadState();
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+/** Geolocation */
+function getGeo(){
+  return new Promise((resolve, reject)=>{
+    if(!navigator.geolocation){
+      reject(new Error("Geolocalización no disponible."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>{
+        const { latitude, longitude, accuracy } = pos.coords;
+        resolve({ lat: latitude, lng: longitude, accuracy: accuracy ?? null, ts: new Date().toISOString() });
+      },
+      (err)=>reject(err),
+      { enableHighAccuracy:true, timeout: 12000, maximumAge: 0 }
+    );
+  });
+}
+
+/** Supabase (simple REST) */
+function cloudConfigured(){
+  return !!(SUPABASE_URL && SUPABASE_ANON_KEY &&
+    !SUPABASE_URL.includes("PEGA_AQUI") &&
+    !SUPABASE_ANON_KEY.includes("PEGA_AQUI"));
+}
+function sbUrl(path){
+  return SUPABASE_URL.replace(/\/$/,"") + path;
+}
+async function sbFetch(path, {method="GET", body=null, headers={}}={}){
+  const h = {
+    "apikey": SUPABASE_ANON_KEY,
+    "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+    ...headers
+  };
+  const opts = { method, headers: h };
+  if(body!=null){
+    opts.headers["Content-Type"]="application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(sbUrl(path), opts);
+  const txt = await res.text().catch(()=> "");
+  if(!res.ok){
+    // intenta mostrar error útil (PostgREST suele devolver JSON)
+    let msg = txt || `HTTP ${res.status}`;
+    try{
+      const j = JSON.parse(txt);
+      msg = j.message || msg;
+      if(j.code) msg += ` (code ${j.code})`;
+      if(j.details) msg += ` · ${j.details}`;
+    }catch(e){}
+    throw new Error(msg);
+  }
+  // Respuesta vacía (return=minimal) => éxito
+  if(!txt || !txt.trim()) return null;
+  try{ return JSON.parse(txt); }catch(e){ return txt; }
+}
+
+// Convert local record -> supabase row (flat)
+function recToRow(rec){
+  return {
+    id: rec.id,
+    day: rec.day,
+    city: normalizeCityValue(rec.city),
+    vendor: rec.vendor,
+    client: rec.client,
+    type: rec.type,
+    notes: rec.notes || "",
+    start_ts: rec.start?.ts || null,
+    end_ts: rec.end?.ts || null,
+    duration_sec: rec.durationSec || null,
+    start_lat: rec.start?.lat ?? null,
+    start_lng: rec.start?.lng ?? null,
+    end_lat: rec.end?.lat ?? null,
+    end_lng: rec.end?.lng ?? null
+  };
+}
+
+// Upsert by id (no duplicates)
+async function uploadRecord(rec){
+  const row = recToRow(rec);
+  const path = `/rest/v1/${encodeURIComponent(SUPABASE_TABLE)}?on_conflict=id`;
+  await sbFetch(path, {
+    method: "POST",
+    body: row,
+    headers: { "Prefer": "resolution=merge-duplicates,return=minimal" }
+  });
+}
+
+function rowToRec(row){
+  return {
+    id: row.id,
+    day: row.day,
+    city: normalizeCityValue(row.city),
+    vendor: row.vendor,
+    client: row.client,
+    type: row.type,
+    notes: row.notes || "",
+    start: { ts: row.start_ts, lat: row.start_lat, lng: row.start_lng, accuracy: null },
+    end:   { ts: row.end_ts,   lat: row.end_lat,   lng: row.end_lng,   accuracy: null },
+    durationSec: row.duration_sec || 0,
+    createdAt: row.created_at || null
+  };
+}
+
+function qEq(field, val){ return `${field}=eq.${encodeURIComponent(val)}`; }
+function qGte(field, val){ return `${field}=gte.${encodeURIComponent(val)}`; }
+function qLte(field, val){ return `${field}=lte.${encodeURIComponent(val)}`; }
+
+async function fetchVisitsFromCloud({city="ALL", vendor="ALL", from=null, to=null, limit=5000}={}){
+  const cols = [
+    "id","day","city","vendor","client","type","notes",
+    "start_ts","end_ts","duration_sec",
+    "start_lat","start_lng","end_lat","end_lng",
+    "created_at"
+  ].join(",");
+  // Filtramos en la nube SOLO por fecha para tolerar variaciones de city/vendor.
+  const qs = [`select=${cols}`, `order=start_ts.desc.nullslast`, `limit=${limit}`];
+  if(from) qs.push(qGte("day", from));
+  if(to) qs.push(qLte("day", to));
+
+  const path = `/rest/v1/${encodeURIComponent(SUPABASE_TABLE)}?` + qs.join("&");
+  const rows = await sbFetch(path);
+  let recs = (rows || []).map(rowToRec);
+
+  if(city && city !== "ALL"){
+    const cc = normalizeCityValue(city);
+    recs = recs.filter(r => normalizeCityValue(r.city) === cc);
+  }
+  if(vendor && vendor !== "ALL"){
+    recs = recs.filter(r => (r.vendor || "") === vendor);
+  }
+  return recs;
+}
+
+async function syncPending(){
+  if(!cloudConfigured() || !navigator.onLine) return;
+  if(!state.pending || state.pending.length===0) return;
+  const queue = state.pending.slice();
+  const still = [];
+  let ok=0;
+  for(const rec of queue){
+    try{
+      await uploadRecord(rec);
+      ok++;
+    }catch(e){
+      still.push(rec);
+    }
+  }
+  state.pending = still;
+  saveState();
+  if(ok>0) toast("Cloud", `Subidos: ${ok} · Pendientes: ${still.length}`);
+}
+
+/** Data filters (local) */
+function recordsFilteredLocal({city=null, vendor=null, from=null, to=null}){
+  let arr = state.records.slice();
+  if(city && city!=="ALL") arr = arr.filter(r=>r.city===city);
+  if(vendor && vendor!=="ALL") arr = arr.filter(r=>r.vendor===vendor);
+  if(from) arr = arr.filter(r=>r.day >= from);
+  if(to) arr = arr.filter(r=>r.day <= to);
+  arr.sort((a,b)=>(b.start?.ts||"").localeCompare(a.start?.ts||""));
+  return arr;
+}
+
+/** DOM elements */
+const elPageCity = $("#page-city");
+const elPageAdmin = $("#page-admin");
+const elRouteSelectMobile = $("#routeSelectMobile");
+
+const elCityTitle = $("#cityTitle");
+const elCitySub = $("#citySub");
+const elVendorSelect = $("#vendorSelect");
+const elClientInput = $("#clientInput");
+const elTypeSelect = $("#typeSelect");
+const elNotesInput = $("#notesInput");
+const elBtnStart = $("#btnStart");
+const elBtnEnd = $("#btnEnd");
+const elBtnLocation = $("#btnLocation");
+const elActiveSummary = $("#activeSummary");
+const elActiveTimer = $("#activeTimer");
+const elDatePick = $("#datePick");
+const elCityTbody = $("#cityTbody");
+const elCityKPIs = $("#cityKPIs");
+const elCityCards = $("#cityCards");
+
+const elBtnExportCity = $("#btnExportCity");
+const elBtnClearDay = $("#btnClearDay");
+const elBtnFitCity = $("#btnFitCity");
+const elBtnDemo = $("#btnDemo");
+
+const elAdminCity = $("#adminCity");
+const elAdminVendor = $("#adminVendor");
+const elAdminFrom = $("#adminFrom");
+const elAdminTo = $("#adminTo");
+const elBtnApplyAdmin = $("#btnApplyAdmin");
+const elBtnTodayAdmin = $("#btnTodayAdmin");
+const elBtn7dAdmin = $("#btn7dAdmin");
+const elBtnExportAdmin = $("#btnExportAdmin");
+const elBtnFitAdmin = $("#btnFitAdmin");
+const elBtnResetAll = $("#btnResetAll");
+const elAdminTbody = $("#adminTbody");
+const elAdminCards = $("#adminCards");
+const elKpiCount = $("#kpiCount");
+const elKpiHours = $("#kpiHours");
+const elKpiClients = $("#kpiClients");
+const elKpiGDL = $("#kpiGDL");
+const elKpiMTY = $("#kpiMTY");
+const elKpiCDMX = $("#kpiCDMX");
+
+const elVendorsText = $("#vendorsText");
+const elBtnSaveVendors = $("#btnSaveVendors");
+const elBtnRestoreVendors = $("#btnRestoreVendors");
+
+/** Vendors */
+function vendorsForCity(cityCode){
+  return (state.vendorsByCity && Array.isArray(state.vendorsByCity[cityCode]))
+    ? state.vendorsByCity[cityCode]
+    : (DEFAULT_VENDORS_BY_CITY[cityCode] || []);
+}
+function allVendorsUnion(){
+  const set = new Set();
+  ["CDMX","MTY","GDL"].forEach(code=>{
+    vendorsForCity(code).forEach(v=>set.add(v));
+  });
+  return Array.from(set).sort((a,b)=>a.localeCompare(b));
+}
+
+/** Routing */
+function setHash(route){ location.hash = route; }
+function getRoute(){
+  const h = location.hash || "#/gdl";
+  return ["#/gdl","#/mty","#/cdmx","#/admin"].includes(h) ? h : "#/gdl";
+}
+function currentCityId(){
+  const r = getRoute();
+  if(r==="#/admin") return null;
+  return r.replace("#/","");
+}
+function cityMeta(cityId){
+  return CITIES.find(c=>c.id===cityId) || CITIES[0];
+}
+function currentDay(){ return elDatePick.value || localDateKey(new Date()); }
+
+/** Render selectors */
+function renderVendorOptions(selectEl, includeAll=false, cityCode=null){
+  selectEl.innerHTML = "";
+  if(includeAll){
+    const opt = document.createElement("option");
+    opt.value="ALL"; opt.textContent="Todos";
+    selectEl.appendChild(opt);
+  }
+  const list = cityCode ? vendorsForCity(cityCode) : allVendorsUnion();
+  list.forEach(v=>{
+    const opt = document.createElement("option");
+    opt.value=v; opt.textContent=v;
+    selectEl.appendChild(opt);
+  });
+}
+function renderCityOptions(selectEl, includeAll=false){
+  selectEl.innerHTML = "";
+  if(includeAll){
+    const opt = document.createElement("option");
+    opt.value="ALL"; opt.textContent="Todas";
+    selectEl.appendChild(opt);
+  }
+  CITIES.forEach(c=>{
+    const opt = document.createElement("option");
+    opt.value=c.code; opt.textContent=c.label;
+    selectEl.appendChild(opt);
+  });
+}
+function refreshAdminVendorOptions(){
+  const city = elAdminCity.value || "ALL";
+  const prev = elAdminVendor.value;
+  if(city === "ALL"){
+    renderVendorOptions(elAdminVendor, true, null);
+  }else{
+    renderVendorOptions(elAdminVendor, true, city);
+  }
+  const opts = Array.from(elAdminVendor.options).map(o=>o.value);
+  if(prev && opts.includes(prev)) elAdminVendor.value = prev;
+}
+function renderTypeOptions(){
+  elTypeSelect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value=""; placeholder.textContent="Selecciona un tipo…";
+  elTypeSelect.appendChild(placeholder);
+  VISIT_TYPES.forEach(t=>{
+    const opt = document.createElement("option");
+    opt.value=t; opt.textContent=t;
+    elTypeSelect.appendChild(opt);
+  });
+}
+
+/** Cards */
+function makeCardItem(r){
+  const start = fmtTime(r.start?.ts);
+  const end = fmtTime(r.end?.ts);
+  const dur = fmtDur(r.durationSec);
+  const loc = (r.start?.lat && r.start?.lng) ? `${r.start.lat.toFixed(5)}, ${r.start.lng.toFixed(5)}` : "—";
+  const notes = (r.notes || "").trim();
+
+  const wrap = document.createElement("div");
+  wrap.className = "cardItem";
+  wrap.innerHTML = `
+    <div class="cardItemTop">
+      <div style="min-width:0">
+        <p class="cardItemTitle">${escapeHtml(r.client || "")}</p>
+        <div class="cardItemMeta">
+          ${escapeHtml(r.vendor || "")} · <span class="tag">${escapeHtml(r.type || "")}</span>
+        </div>
+      </div>
+      <div class="cardItemRight">
+        <div class="dur">${dur}</div>
+        <div class="locMini mono" style="margin-top:6px">${escapeHtml(loc)}</div>
+      </div>
+    </div>
+    <div class="cardItemBottom">
+      <span class="tag">${start} → ${end}</span>
+      <span class="tag ${durTag(r.durationSec)}">${escapeHtml(cityLabel(r.city))}</span>
+    </div>
+    <div class="cardItemNotes">${escapeHtml(notes || "—")}</div>
+  `;
+  return wrap;
+}
+function renderCityCards(recs){
+  if(!elCityCards) return;
+  elCityCards.innerHTML = "";
+  if(!recs || recs.length===0){
+    const d = document.createElement("div");
+    d.className="cardItem";
+    d.innerHTML = `<div class="muted">Sin registros para esta fecha.</div>`;
+    elCityCards.appendChild(d);
+    return;
+  }
+  recs.forEach(r=> elCityCards.appendChild(makeCardItem(r)));
+}
+function renderAdminCards(recs){
+  if(!elAdminCards) return;
+  elAdminCards.innerHTML = "";
+  if(!recs || recs.length===0){
+    const d = document.createElement("div");
+    d.className="cardItem";
+    d.innerHTML = `<div class="muted">Sin registros en el rango seleccionado.</div>`;
+    elAdminCards.appendChild(d);
+    return;
+  }
+  recs.forEach(r=> elAdminCards.appendChild(makeCardItem(r)));
+}
+
+/** Map */
+let cityMap=null, adminMap=null, cityLayer=null, adminLayer=null, cityLine=null, adminLine=null;
+
+function leafletOk(){
+  return (typeof window.L !== "undefined");
+}
+function ensureCityMap(){
+  if(cityMap) return;
+  if(!leafletOk()){
+    toast("Mapa", "No cargó Leaflet (sin internet o bloqueado).");
+    return;
+  }
+  cityMap = L.map("mapCity", { zoomControl:true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(cityMap);
+  cityLayer = L.layerGroup().addTo(cityMap);
+  cityMap.setView([20.6736, -103.344], 12);
+}
+function ensureAdminMap(){
+  if(adminMap) return;
+  if(!leafletOk()){
+    toast("Mapa", "No cargó Leaflet (sin internet o bloqueado).");
+    return;
+  }
+  adminMap = L.map("mapAdmin", { zoomControl:true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap" }).addTo(adminMap);
+  adminLayer = L.layerGroup().addTo(adminMap);
+  adminMap.setView([19.4326, -99.1332], 10);
+}
+
+function updateCityMap(recs){
+  if(!cityMap || !cityLayer) return;
+  cityLayer.clearLayers();
+  if(cityLine){ cityLine.remove(); cityLine=null; }
+
+  const pts = [];
+  recs.slice().reverse().forEach((r)=>{
+    if(r.start?.lat && r.start?.lng){
+      const pt = [r.start.lat, r.start.lng];
+      pts.push(pt);
+      const label = `${escapeHtml(r.client)} • ${escapeHtml(r.vendor)}<br>${escapeHtml(r.type)}<br>${fmtTime(r.start.ts)} (${r.day})`;
+      L.marker(pt).addTo(cityLayer).bindPopup(label);
+    }
+  });
+
+  if(pts.length>=2){
+    cityLine = L.polyline(pts, { opacity: 0.65 }).addTo(cityMap);
+  }
+
+  if(pts.length>0){
+    cityMap.fitBounds(L.latLngBounds(pts).pad(0.25));
+  }else{
+    const cityId = currentCityId();
+    const center = cityDefaultCenter(cityId);
+    cityMap.setView(center, 12);
+  }
+
+  setTimeout(()=>cityMap.invalidateSize(), 70);
+}
+
+function updateAdminMap(recs){
+  if(!adminMap || !adminLayer) return;
+  adminLayer.clearLayers();
+  if(adminLine){ adminLine.remove(); adminLine=null; }
+
+  const pts = [];
+  recs.slice().reverse().forEach(r=>{
+    if(r.start?.lat && r.start?.lng){
+      const pt = [r.start.lat, r.start.lng];
+      pts.push(pt);
+      const label = `${escapeHtml(cityLabel(r.city))} • ${escapeHtml(r.client)}<br>${escapeHtml(r.vendor)} — ${escapeHtml(r.type)}<br>${fmtDate(r.start.ts)} ${fmtTime(r.start.ts)}`;
+      L.marker(pt).addTo(adminLayer).bindPopup(label);
+    }
+  });
+
+  if(pts.length>=2){
+    adminLine = L.polyline(pts, { opacity: 0.55 }).addTo(adminMap);
+  }
+
+  if(pts.length>0){
+    adminMap.fitBounds(L.latLngBounds(pts).pad(0.25));
+  }
+  setTimeout(()=>adminMap.invalidateSize(), 70);
+}
+
+/** KPI box */
+function kpiBox(label, value){
+  const d = document.createElement("div");
+  d.className="kpi";
+  d.innerHTML = `<div><strong>${escapeHtml(label)}</strong><span class="muted">selección actual</span></div><div class="value">${escapeHtml(value)}</div>`;
+  return d;
+}
+
+/** City rendering */
+let timerTick=null;
+function startTimer(){
+  if(timerTick) return;
+  timerTick = setInterval(renderActive, 500);
+}
+function stopTimer(){
+  if(timerTick){ clearInterval(timerTick); timerTick=null; }
+}
+
+function renderActive(){
+  const a = state.active;
+  const cityId = currentCityId();
+  const cityCode = cityId ? cityMeta(cityId).code : null;
+
+  if(a && cityCode && a.city === cityCode){
+    elBtnStart.disabled = true;
+    elBtnEnd.disabled = false;
+    elBtnStart.style.opacity = .55;
+    elBtnEnd.style.opacity = 1;
+
+    const st = new Date(a.start.ts);
+    const sec = Math.max(0, (Date.now() - st.getTime())/1000);
+    elActiveTimer.textContent = fmtDur(sec);
+
+    const loc = a.start?.lat ? `📍 ${a.start.lat.toFixed(5)}, ${a.start.lng.toFixed(5)}` : "📍 (sin coordenadas)";
+    elActiveSummary.textContent = `${a.vendor} · ${a.client} · ${a.type} · ${loc}`;
+  } else {
+    elBtnStart.disabled = false;
+    elBtnEnd.disabled = true;
+    elBtnStart.style.opacity = 1;
+    elBtnEnd.style.opacity = .55;
+
+    elActiveTimer.textContent = "—";
+    elActiveSummary.textContent = "No hay visita activa.";
+  }
+}
+
+function dayCityRecordsLocal(cityId, dayKey){
+  const city = cityMeta(cityId).code;
+  return recordsFilteredLocal({city, from: dayKey, to: dayKey});
+}
+
+function renderCity(){
+  if(!elDatePick.value) elDatePick.value = localDateKey(new Date());
+  const cityCode = cityMeta(currentCityId()).code;
+
+  renderVendorOptions(elVendorSelect, false, cityCode);
+  renderTypeOptions();
+
+  const last = state.lastVendorByCity?.[cityCode] || null;
+  const available = Array.from(elVendorSelect.options).map(o=>o.value);
+  if(last && available.includes(last)) elVendorSelect.value = last;
+  else elVendorSelect.selectedIndex = 0;
+
+  renderCityTableAndMap();
+  renderActive();
+}
+
+function renderCityTableAndMap(){
+  const cityId = currentCityId();
+  const dayKey = currentDay();
+  const meta = cityMeta(cityId);
+  const recs = dayCityRecordsLocal(cityId, dayKey);
+
+  const total = recs.length;
+  const totalSec = recs.reduce((acc,r)=>acc + (r.durationSec||0), 0);
+  const clients = new Set(recs.map(r=>r.client?.trim().toLowerCase()).filter(Boolean)).size;
+
+  elCityKPIs.innerHTML = "";
+  elCityKPIs.appendChild(kpiBox("Visitas", String(total)));
+  elCityKPIs.appendChild(kpiBox("Horas", (totalSec/3600).toFixed(1)));
+  elCityKPIs.appendChild(kpiBox("Clientes", String(clients)));
+
+  elCityTbody.innerHTML = "";
+  if(recs.length===0){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="8" class="muted">Sin registros para ${dayKey} en ${meta.label}. Usa “Cargar ejemplo” para ver cómo se vería.</td>`;
+    elCityTbody.appendChild(tr);
+  }else{
+    recs.forEach(r=>{
+      const tr = document.createElement("tr");
+      const start = fmtTime(r.start?.ts);
+      const end = fmtTime(r.end?.ts);
+      const dur = fmtDur(r.durationSec);
+      const notes = safeText(r.notes).trim();
+      const loc = (r.start?.lat && r.start?.lng) ? `${r.start.lat.toFixed(5)}, ${r.start.lng.toFixed(5)}` : "—";
+      tr.innerHTML = `
+        <td>${start}</td>
+        <td>${end}</td>
+        <td><span class="tag ${durTag(r.durationSec)}">${dur}</span></td>
+        <td>${escapeHtml(r.vendor)}</td>
+        <td>${escapeHtml(r.client)}</td>
+        <td><span class="tag">${escapeHtml(r.type)}</span></td>
+        <td>${escapeHtml(notes || "—")}</td>
+        <td class="mono">${escapeHtml(loc)}</td>
+      `;
+      elCityTbody.appendChild(tr);
+    });
+  }
+
+  renderCityCards(recs);
+
+  ensureCityMap();
+  updateCityMap(recs);
+}
+
+/** Admin rendering (Cloud first) */
+async function renderAdmin(){
+  renderCityOptions(elAdminCity, true);
+  renderVendorOptions(elAdminVendor, true, null);
+
+  const today = localDateKey(new Date());
+  if(!elAdminFrom.value) elAdminFrom.value = today;
+  if(!elAdminTo.value) elAdminTo.value = today;
+
+  renderVendorsCityPick();
+  refreshAdminVendorOptions();
+
+  ensureAdminMap();
+  await applyAdminFilters();
+}
+
+async function applyAdminFilters(){
+  const city = elAdminCity.value || "ALL";
+  const vendor = elAdminVendor.value || "ALL";
+  const from = elAdminFrom.value || null;
+  const to = elAdminTo.value || null;
+
+  let recs = [];
+  if(cloudConfigured()){
+    try{
+      recs = await fetchVisitsFromCloud({city, vendor, from, to});
+    }catch(e){
+      toast("Cloud", `Error leyendo nube: ${e.message}`);
+      // fallback local
+      recs = recordsFilteredLocal({city, vendor, from, to});
+    }
+  }else{
+    recs = recordsFilteredLocal({city, vendor, from, to});
+  }
+
+  // KPIs
+  const total = recs.length;
+  const totalSec = recs.reduce((acc,r)=>acc + (r.durationSec||0), 0);
+  const clients = new Set(recs.map(r=>r.client?.trim().toLowerCase()).filter(Boolean)).size;
+  elKpiCount.textContent = total;
+  elKpiHours.textContent = (totalSec/3600).toFixed(1);
+  elKpiClients.textContent = clients;
+
+  // Desglose por ciudad
+  const byCity = {GDL:0, MTY:0, CDMX:0};
+  recs.forEach(r=>{ const c = normalizeCityValue(r.city); if(byCity[c]!==undefined) byCity[c]++; });
+  if(elKpiGDL) elKpiGDL.textContent = String(byCity.GDL);
+  if(elKpiMTY) elKpiMTY.textContent = String(byCity.MTY);
+  if(elKpiCDMX) elKpiCDMX.textContent = String(byCity.CDMX);
+
+  // table
+  elAdminTbody.innerHTML = "";
+  if(recs.length===0){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="10" class="muted">Sin registros en el rango seleccionado.</td>`;
+    elAdminTbody.appendChild(tr);
+  }else{
+    recs.forEach(r=>{
+      const tr = document.createElement("tr");
+      const loc = (r.start?.lat && r.start?.lng) ? `${r.start.lat.toFixed(5)}, ${r.start.lng.toFixed(5)}` : "—";
+      tr.innerHTML = `
+        <td>${escapeHtml(r.day)}</td>
+        <td>${escapeHtml(cityLabel(r.city))}</td>
+        <td>${escapeHtml(r.vendor)}</td>
+        <td>${escapeHtml(r.client)}</td>
+        <td><span class="tag">${escapeHtml(r.type)}</span></td>
+        <td>${fmtTime(r.start?.ts)}</td>
+        <td>${fmtTime(r.end?.ts)}</td>
+        <td><span class="tag ${durTag(r.durationSec)}">${fmtDur(r.durationSec)}</span></td>
+        <td>${escapeHtml((r.notes||"—").trim() || "—")}</td>
+        <td class="mono">${escapeHtml(loc)}</td>
+      `;
+      elAdminTbody.appendChild(tr);
+    });
+  }
+
+  renderAdminCards(recs);
+  ensureAdminMap();
+  updateAdminMap(recs);
+}
+
+/** Actions */
+async function startVisit(){
+  const cityId = currentCityId();
+  const meta = cityMeta(cityId);
+
+  const vendor = elVendorSelect.value?.trim();
+  const client = elClientInput.value?.trim();
+  const type = elTypeSelect.value?.trim();
+  const notes = elNotesInput.value?.trim();
+
+  if(state.active){
+    toast("Ya hay una visita activa", "Termina la visita actual antes de iniciar otra.");
+    return;
+  }
+  if(!vendor){ toast("Falta vendedor", "Selecciona el vendedor."); return; }
+  if(!client){ toast("Falta cliente", "Escribe el nombre del cliente a visitar."); return; }
+  if(!type){ toast("Falta tipo", "Selecciona el tipo de visita."); return; }
+
+  state.lastVendorByCity = state.lastVendorByCity || {};
+  state.lastVendorByCity[meta.code] = vendor;
+
+  const active = {
+    id: uuid(),
+    city: meta.code,
+    vendor, client, type,
+    notes,
+    start: { ts: new Date().toISOString(), lat:null, lng:null, accuracy:null }
+  };
+  state.active = active;
+  saveState();
+  renderActive();
+
+  try{
+    toast("Iniciando...", "Obteniendo ubicación…");
+    const geo = await getGeo();
+    state.active.start = { ts: state.active.start.ts, ...geo };
+    saveState();
+    toast("Visita iniciada", `GPS OK (${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)})`);
+  }catch(e){
+    toast("Visita iniciada", "Sin GPS (permiso denegado o sin señal). Puedes intentar “Actualizar ubicación”.");
+  }
+  renderActive();
+  renderCityTableAndMap();
+}
+
+async function endVisit(){
+  const cityId = currentCityId();
+  const meta = cityMeta(cityId);
+
+  if(!state.active || state.active.city !== meta.code){
+    toast("No hay visita activa", "Inicia una visita para poder terminarla.");
+    return;
+  }
+
+  const a = state.active;
+  let end = { ts: new Date().toISOString(), lat:null, lng:null, accuracy:null };
+
+  try{
+    toast("Terminando...", "Obteniendo ubicación final…");
+    const geo = await getGeo();
+    end = { ts: end.ts, ...geo };
+  }catch(e){}
+
+  const st = new Date(a.start.ts);
+  const et = new Date(end.ts);
+  const durationSec = Math.max(0, Math.round((et - st)/1000));
+
+  const rec = {
+    id: a.id,
+    day: localDateKey(st),
+    city: a.city,
+    vendor: a.vendor,
+    client: a.client,
+    type: a.type,
+    notes: a.notes,
+    start: a.start,
+    end,
+    durationSec,
+    createdAt: new Date().toISOString()
+  };
+
+  state.records.push(rec);
+  state.active = null;
+  saveState();
+
+  toast("Visita guardada", `${rec.client} · ${fmtDur(durationSec)} · ${cityLabel(rec.city)}`);
+
+  // limpiar campos para rapidez
+  elClientInput.value = "";
+  elNotesInput.value = "";
+  elTypeSelect.value = "";
+
+  renderActive();
+  renderCityTableAndMap();
+
+  // subir a Supabase (si está configurado)
+  if(cloudConfigured()){
+    if(!navigator.onLine){
+      state.pending.push(rec);
+      saveState();
+      toast("Cloud", "Offline: quedó pendiente para subir.");
+      return;
+    }
+    try{
+      await uploadRecord(rec);
+      toast("Cloud", "Subido OK");
+    }catch(e){
+      state.pending.push(rec);
+      saveState();
+      toast("Cloud", "Fallo subida: " + (e.message || "desconocido") + " · quedó pendiente.");
+    }
+  }
+}
+
+async function updateActiveLocation(){
+  if(!state.active){
+    toast("Sin visita activa", "Este botón actualiza la ubicación de la visita en curso.");
+    return;
+  }
+  try{
+    toast("Actualizando...", "Obteniendo ubicación…");
+    const geo = await getGeo();
+    state.active.start = { ts: state.active.start.ts, ...geo };
+    saveState();
+    toast("Ubicación actualizada", `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)} (±${Math.round(geo.accuracy||0)}m)`);
+  }catch(e){
+    toast("No se pudo obtener ubicación", "Revisa permisos de ubicación y señal GPS.");
+  }
+  renderActive();
+}
+
+function clearThisDay(){
+  const cityId = currentCityId();
+  const dayKey = currentDay();
+  const meta = cityMeta(cityId);
+
+  const before = state.records.length;
+  state.records = state.records.filter(r => !(r.city===meta.code && r.day===dayKey));
+  const after = state.records.length;
+  saveState();
+
+  toast("Listo", `Se borraron ${before-after} registros de ${meta.label} en ${dayKey}.`);
+  renderCityTableAndMap();
+}
+
+function resetAll(){
+  state = {
+    vendorsByCity: {
+      "CDMX": (DEFAULT_VENDORS_BY_CITY["CDMX"] || []).slice(),
+      "MTY":  (DEFAULT_VENDORS_BY_CITY["MTY"]  || []).slice(),
+      "GDL":  (DEFAULT_VENDORS_BY_CITY["GDL"]  || []).slice()
+    },
+    records: [],
+    pending: [],
+    active: null,
+    lastVendorByCity: {}
+  };
+  saveState();
+  toast("Reset total", "Se borró toda la información local.");
+  location.hash = "#/gdl";
+  renderCity();
+}
+
+function loadDemo(){
+  const cityId = currentCityId();
+  const meta = cityMeta(cityId);
+  const day = localDateKey(new Date());
+  const center = cityDefaultCenter(cityId);
+
+  const sample = [
+    {
+      id: uuid(),
+      day,
+      city: meta.code,
+      vendor: (vendorsForCity(meta.code)[0] || "Vendedor 1"),
+      client: "Sushi Beto",
+      type: "Degustación",
+      notes: "Se degustó; interés en 2 nuevos productos. Seguimiento la próxima semana.",
+      start: { ts: new Date(Date.now()-1000*60*54).toISOString(), lat: center[0]+0.010, lng: center[1]-0.008, accuracy: 18 },
+      end: { ts: new Date(Date.now()-1000*60*34).toISOString(), lat: center[0]+0.011, lng: center[1]-0.007, accuracy: 20 },
+      durationSec: 20*60,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: uuid(),
+      day,
+      city: meta.code,
+      vendor: (vendorsForCity(meta.code)[1] || "Vendedor 2"),
+      client: "Oishi Panda",
+      type: "Entrega de faltantes",
+      notes: "Se entregó faltante y se revisó inventario; pendiente ajuste de precio.",
+      start: { ts: new Date(Date.now()-1000*60*30).toISOString(), lat: center[0]-0.012, lng: center[1]+0.009, accuracy: 25 },
+      end: { ts: new Date(Date.now()-1000*60*12).toISOString(), lat: center[0]-0.012, lng: center[1]+0.009, accuracy: 25 },
+      durationSec: 18*60,
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  const exists = state.records.some(r=>r.city===meta.code && r.day===day);
+  if(!exists){
+    state.records.push(...sample);
+    saveState();
+    toast("Ejemplo cargado", "Se agregaron 2 visitas demo para ver el formato.");
+  }else{
+    toast("Ya hay registros", "Para ver ejemplo limpio, borra el día primero o usa otra fecha.");
+  }
+  renderCityTableAndMap();
+}
+
+/** Export CSV */
+function csvSafe(s){
+  const t = safeText(s).replace(/"/g,'""');
+  return `"${t}"`;
+}
+function exportCSV(recs, filename){
+  const headers = [
+    "day","city","vendor","client","type",
+    "start_ts","end_ts","duration_sec",
+    "start_lat","start_lng","end_lat","end_lng",
+    "notes"
+  ];
+  const lines = [headers.join(",")];
+  recs.forEach(r=>{
+    const row = [
+      r.day,
+      r.city,
+      csvSafe(r.vendor),
+      csvSafe(r.client),
+      csvSafe(r.type),
+      r.start?.ts || "",
+      r.end?.ts || "",
+      r.durationSec || "",
+      (r.start?.lat ?? ""),
+      (r.start?.lng ?? ""),
+      (r.end?.lat ?? ""),
+      (r.end?.lng ?? ""),
+      csvSafe(r.notes || "")
+    ];
+    lines.push(row.join(","));
+  });
+  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast("Exportado", filename);
+}
+
+/** Vendors editor (admin) */
+function renderVendorsCityPick(){
+  const sel = document.getElementById("vendorsCityPick");
+  if(!sel) return;
+  sel.innerHTML = "";
+  ["GDL","MTY","CDMX"].forEach(code=>{
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = cityLabel(code);
+    sel.appendChild(opt);
+  });
+  const current = (elAdminCity && elAdminCity.value && elAdminCity.value!=="ALL") ? elAdminCity.value : "GDL";
+  sel.value = current;
+  elVendorsText.value = vendorsForCity(sel.value).join("\n");
+
+  sel.onchange = ()=>{ elVendorsText.value = vendorsForCity(sel.value).join("\n"); };
+}
+
+/** Apply route */
+async function applyRoute(){
+  const route = getRoute();
+
+  if(route!=="#/admin") lastNonAdminRoute = route;
+
+  // pills active
+  $$(".pill").forEach(p=>p.classList.toggle("active", p.getAttribute("data-route")===route));
+
+  // mobile dropdown
+  if(elRouteSelectMobile){
+    if(!elRouteSelectMobile.options.length){
+      const routes = [
+        {value:"#/gdl", label:"Guadalajara"},
+        {value:"#/mty", label:"Monterrey"},
+        {value:"#/cdmx", label:"México"},
+        {value:"#/admin", label:"Admin"}
+      ];
+      routes.forEach(r=>{
+        const opt = document.createElement("option");
+        opt.value = r.value;
+        opt.textContent = r.label;
+        elRouteSelectMobile.appendChild(opt);
+      });
+    }
+    elRouteSelectMobile.value = route;
+  }
+
+  if(route==="#/admin"){
+    // Requiere PIN cada vez que entras a Admin
+    if(!isAdminUnlocked()){
+      showPinModal(true);
+      elPageCity.classList.remove("hide");
+      elPageAdmin.classList.add("hide");
+      stopTimer();
+      if(elAdminLockFab) elAdminLockFab.style.display="none";
+      if(elAdminChangePinFab) elAdminChangePinFab.style.display="none";
+      return;
+    }
+    showPinModal(false);
+    elPageCity.classList.add("hide");
+    elPageAdmin.classList.remove("hide");
+    stopTimer();
+    if(elAdminLockFab) elAdminLockFab.style.display="block";
+    if(elAdminChangePinFab) elAdminChangePinFab.style.display="block";
+    await renderAdmin();
+  }else{
+    elPageAdmin.classList.add("hide");
+    elPageCity.classList.remove("hide");
+
+    const cityId = currentCityId();
+    const meta = cityMeta(cityId);
+    elCityTitle.textContent = `Ciudad: ${meta.label}`;
+    elCitySub.textContent = `Zona ${meta.code} · historial y mapa del día`;
+
+    ensureCityMap();
+    renderCity();
+    startTimer();
+  }
+}
+
+/** Events */
+function bindEvents(){
+  // Admin PIN (eventos)
+  if(elPinCancel){
+    elPinCancel.addEventListener("click", ()=>{
+      showPinModal(false);
+      if(location.hash==="#/admin") location.hash = (lastNonAdminRoute || "#/gdl");
+    });
+  }
+  if(elPinUnlock){
+    elPinUnlock.addEventListener("click", async ()=>{
+      const ok = await tryUnlockWithPin(elPinInput?.value || "");
+      if(ok){
+        unlockAdmin();
+        showPinModal(false);
+        location.hash = "#/admin";
+      }else{
+        if(elPinErr) elPinErr.style.display = "block";
+        toast("PIN", "Incorrecto");
+      }
+    });
+  }
+  if(elPinInput){
+    elPinInput.addEventListener("keydown", (ev)=>{
+      if(ev.key === "Enter") elPinUnlock?.click();
+    });
+  }
+  if(elAdminLockFab){
+    elAdminLockFab.addEventListener("click", ()=>{
+      lockAdmin();
+      toast("Admin", "Bloqueado");
+      location.hash = (lastNonAdminRoute || "#/gdl");
+    });
+  }
+  if(elAdminChangePinFab){
+    elAdminChangePinFab.addEventListener("click", ()=>changePinFlow());
+  }
+
+  // Mobile route dropdown
+  if(elRouteSelectMobile){
+    elRouteSelectMobile.addEventListener("change", ()=> {
+      const v = elRouteSelectMobile.value;
+      if(v) location.hash = v;
+    });
+  }
+
+  // nav pills
+  $$(".pill").forEach(p=>{
+    p.addEventListener("click", ()=>setHash(p.getAttribute("data-route")));
+  });
+
+  window.addEventListener("hashchange", ()=>applyRoute());
+
+  elBtnStart.addEventListener("click", startVisit);
+  elBtnEnd.addEventListener("click", endVisit);
+  elBtnLocation.addEventListener("click", updateActiveLocation);
+
+  elDatePick.addEventListener("change", renderCityTableAndMap);
+
+  elVendorSelect.addEventListener("change", ()=>{
+    const cityCode = cityMeta(currentCityId()).code;
+    state.lastVendorByCity = state.lastVendorByCity || {};
+    state.lastVendorByCity[cityCode] = elVendorSelect.value;
+    saveState();
+  });
+
+  elBtnClearDay.addEventListener("click", clearThisDay);
+
+  elBtnFitCity.addEventListener("click", ()=>{
+    const cityId = currentCityId();
+    const recs = dayCityRecordsLocal(cityId, currentDay());
+    ensureCityMap();
+    updateCityMap(recs);
+  });
+
+  elBtnDemo.addEventListener("click", loadDemo);
+
+  elBtnExportCity.addEventListener("click", ()=>{
+    const cityId = currentCityId();
+    const meta = cityMeta(cityId);
+    const dayKey = currentDay();
+    const recs = dayCityRecordsLocal(cityId, dayKey);
+    exportCSV(recs, `visitas_${meta.code}_${dayKey}.csv`);
+  });
+
+  // Admin filters
+  if(elAdminCity){
+    elAdminCity.addEventListener("change", async ()=>{
+      refreshAdminVendorOptions();
+      const sel = document.getElementById("vendorsCityPick");
+      if(sel && elAdminCity.value && elAdminCity.value !== "ALL"){
+        sel.value = elAdminCity.value;
+        elVendorsText.value = vendorsForCity(sel.value).join("\n");
+      }
+      await applyAdminFilters();
+    });
+  }
+
+  elBtnApplyAdmin.addEventListener("click", ()=>applyAdminFilters());
+
+  // Quick buttons de ciudad (Admin)
+  const quick = document.getElementById("adminCityQuick");
+  if(quick){
+    quick.addEventListener("click", async (ev)=>{
+      const btn = ev.target?.closest?.("button[data-city]");
+      if(!btn) return;
+      const c = btn.getAttribute("data-city");
+      if(elAdminCity) elAdminCity.value = c;
+      refreshAdminVendorOptions();
+      await applyAdminFilters();
+    });
+  }
+
+
+  elBtnTodayAdmin.addEventListener("click", async ()=>{
+    const today = localDateKey(new Date());
+    elAdminFrom.value = today;
+    elAdminTo.value = today;
+    await applyAdminFilters();
+  });
+
+  elBtn7dAdmin.addEventListener("click", async ()=>{
+    const to = localDateKey(new Date());
+    const fromDate = new Date(Date.now()-1000*60*60*24*6);
+    const from = localDateKey(fromDate);
+    elAdminFrom.value = from;
+    elAdminTo.value = to;
+    await applyAdminFilters();
+  });
+
+  elBtnExportAdmin.addEventListener("click", async ()=>{
+    const city = elAdminCity.value || "ALL";
+    const vendor = elAdminVendor.value || "ALL";
+    const from = elAdminFrom.value || "";
+    const to = elAdminTo.value || "";
+    let recs = [];
+    if(cloudConfigured()){
+      try{ recs = await fetchVisitsFromCloud({city, vendor, from, to}); }
+      catch(e){ recs = recordsFilteredLocal({city, vendor, from, to}); }
+    }else{
+      recs = recordsFilteredLocal({city, vendor, from, to});
+    }
+    exportCSV(recs, `visitas_admin_${city}_${vendor}_${from}_a_${to}.csv`.replaceAll(" ","_"));
+  });
+
+  elBtnFitAdmin.addEventListener("click", ()=>applyAdminFilters());
+
+  elBtnResetAll.addEventListener("click", resetAll);
+
+  // Vendors editor save/restore
+  elBtnSaveVendors.addEventListener("click", ()=>{
+    const sel = document.getElementById("vendorsCityPick");
+    const zone = sel ? sel.value : "GDL";
+    const lines = elVendorsText.value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(lines.length===0){ toast("Lista vacía", "Agrega al menos un vendedor."); return; }
+    state.vendorsByCity = state.vendorsByCity || {};
+    state.vendorsByCity[zone] = Array.from(new Set(lines));
+    saveState();
+    toast("Guardado", `${cityLabel(zone)}: ${state.vendorsByCity[zone].length} vendedores`);
+    // refresh selectors
+    const currentCityCode = cityMeta(currentCityId()).code;
+    renderVendorOptions(elVendorSelect, false, currentCityCode);
+    refreshAdminVendorOptions();
+  });
+
+  elBtnRestoreVendors.addEventListener("click", ()=>{
+    const sel = document.getElementById("vendorsCityPick");
+    const zone = sel ? sel.value : "GDL";
+    state.vendorsByCity = state.vendorsByCity || {};
+    state.vendorsByCity[zone] = (DEFAULT_VENDORS_BY_CITY[zone] || []).slice();
+    saveState();
+    elVendorsText.value = state.vendorsByCity[zone].join("\n");
+    toast("Restaurado", `${cityLabel(zone)}: lista default cargada.`);
+    const currentCityCode = cityMeta(currentCityId()).code;
+    renderVendorOptions(elVendorSelect, false, currentCityCode);
+    refreshAdminVendorOptions();
+  });
+
+  // Auto-sync pending when online
+  window.addEventListener("online", ()=>syncPending());
+}
+
+/** Init */
+(async function init(){
+  await ensureDefaultPin();
+  // Fuerza pedir PIN en cada recarga
+  lockAdmin();
+  if(!location.hash) location.hash = "#/gdl";
+  elDatePick.value = localDateKey(new Date());
+
+  bindEvents();
+
+  // Quick hint if cloud not configured
+  if(!cloudConfigured()){
+    toast("Cloud", "Si quieres ver TODO en Admin: pega SUPABASE_URL + ANON_KEY en el index.html");
+  }else{
+    // try send pending
+    syncPending();
+  }
+
+  await applyRoute();
+})();
+</script>
+
+<!-- Admin PIN overlay -->
+<div id="adminPinOverlay" class="pinOverlay" aria-hidden="true">
+  <div class="pinModal" role="dialog" aria-modal="true" aria-label="PIN Admin">
+    <div class="hd">
+      <h3>Acceso Admin</h3>
+      <p>Ingresa tu PIN para entrar a Admin.</p>
+    </div>
+    <div class="bd">
+      <label style="display:block;font-size:12px;opacity:.7;margin:0 0 6px">PIN</label>
+      <input id="adminPinInput" type="password" inputmode="numeric" placeholder="••••"
+             style="width:100%;padding:12px 12px;border-radius:14px;border:1px solid rgba(15,23,42,.12);background:rgba(255,255,255,.92);font-size:16px"/>
+      <div style="margin-top:10px;font-size:12px;opacity:.75">
+        PIN por defecto: <b>1234</b>
+      </div>
+      <div id="adminPinErr" style="margin-top:10px;font-size:12px;color:#b91c1c;display:none">PIN incorrecto.</div>
+    </div>
+    <div class="ft">
+      <button class="btn" id="adminPinCancel">Cancelar</button>
+      <button class="btn primary" id="adminPinUnlock">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<button id="adminLockFab" class="fabAdmin" style="bottom:14px;">Bloquear</button>
+<button id="adminChangePinFab" class="fabAdmin" style="bottom:64px;">Cambiar PIN</button>
+
+</body>
+</html>
