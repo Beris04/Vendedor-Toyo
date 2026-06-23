@@ -1,15 +1,14 @@
-ATN CLIENTES · OFICINA GDL
+ATN Clientes Toyo Foods - Versión Ejecutiva V6
 
-Archivos para GitHub Pages:
+Archivos principales:
 - index.html
 - data.js
 - assets/logo.png
 
-Uso:
-1. Subir todo el contenido a GitHub Desktop.
-2. Publicar con GitHub Pages.
-3. Cada persona de Atención a Clientes debe iniciar sesión con su nombre.
-4. La información guardada en historial y faltantes se almacena en el navegador donde se usa la herramienta.
-5. Para un registro compartido en tiempo real entre varias computadoras, se requiere conectar Google Forms, Supabase, Firebase o Apps Script.
+Para actualizar cada 15 días:
+1. Reemplazar el Excel base y volver a generar data.js.
+2. La sección Dashboard ejecutivo y Niveles de recuperación se alimentan de data.js.
+3. Los registros de atención se guardan localmente en el navegador y pueden exportarse a CSV.
 
-Datos cargados desde Excel: Enero a Mayo 2026, Oficina GDL.
+GitHub Pages:
+Subir la carpeta completa al repositorio y abrir index.html.
