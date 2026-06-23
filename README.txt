@@ -1,16 +1,15 @@
-ATN CLIENTES - NUEVO DASHBOARD
+ATN CLIENTES · OFICINA GDL
 
-Archivos principales:
-- index.html: panel nuevo de Atención a Clientes.
-- data.js: base de clientes, productos comprados y productos no comprados.
-- assets/promociones/: imágenes de promociones.
+Archivos para GitHub Pages:
+- index.html
+- data.js
+- assets/logo.png
 
-Uso en GitHub Desktop:
-1. Sube index.html, data.js y carpeta assets.
-2. Activa GitHub Pages desde Settings > Pages.
-3. Abre el link del sitio.
+Uso:
+1. Subir todo el contenido a GitHub Desktop.
+2. Publicar con GitHub Pages.
+3. Cada persona de Atención a Clientes debe iniciar sesión con su nombre.
+4. La información guardada en historial y faltantes se almacena en el navegador donde se usa la herramienta.
+5. Para un registro compartido en tiempo real entre varias computadoras, se requiere conectar Google Forms, Supabase, Firebase o Apps Script.
 
-Notas importantes:
-- Los registros de seguimiento, pedidos y faltantes se guardan en el navegador por ser GitHub Pages estático.
-- Para consolidar cada 15 días, usa Exportar CSV en Faltantes y copia/descarga reportes.
-- Si se requiere que todas las chicas vean el mismo historial en tiempo real, se debe conectar a Google Sheets, Supabase, Forms o EmailJS.
+Datos cargados desde Excel: Enero a Mayo 2026, Oficina GDL.
