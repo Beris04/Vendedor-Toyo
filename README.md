@@ -29,3 +29,11 @@ La app funciona en modo local aunque Supabase no esté configurado.
 
 ## Actualización mensual
 La idea es no rehacer el HTML. Cada mes se importan ventas nuevas a `ventas_historial`, se actualizan clientes/productos si hay cambios, y los dashboards se recalculan.
+
+
+## Conexión configurada
+
+Este paquete ya incluye la URL y Anon Key de Supabase en `config.js`.
+
+Para que guarde pedidos en Supabase, primero ejecuta `sql/supabase_schema.sql` en Supabase SQL Editor.
+
