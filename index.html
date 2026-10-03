@@ -1,87 +1,376 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Toyo Foods | Sales Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="upload-page">
-  <div class="upload-bg">
-    <div class="jp-dot dot1"></div>
-    <div class="jp-dot dot2"></div>
-    <div class="jp-line line1"></div>
-    <div class="jp-line line2"></div>
-  </div>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Toyo Foods · Dashboard Comercial</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --navy:#12324d; --navy2:#194c73; --blue:#2f7db8; --red:#d74d4d;
+  --green:#2f9c65; --amber:#d9962f; --bg:#f4f7f9; --panel:#fff;
+  --ink:#21303d; --muted:#718190; --line:#e3eaf0; --soft:#edf4f8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
 
-  <header class="landing-top">
-    <div class="logo-lockup">
-      <div class="logo-mark">T</div>
-      <div>
-        <div class="logo-small">TOYO FOODS</div>
-        <div class="logo-large">Sales Intelligence</div>
-      </div>
-    </div>
-    <div class="secure-pill"><i data-lucide="shield-check"></i> Procesamiento local</div>
+/* landing */
+#uploadView{min-height:100vh;background:
+ radial-gradient(circle at 10% 10%,rgba(47,125,184,.11),transparent 28%),
+ radial-gradient(circle at 90% 88%,rgba(215,77,77,.08),transparent 24%),
+ linear-gradient(135deg,#f8fbfd,#edf4f8);}
+.topBrand{height:90px;display:flex;align-items:center;justify-content:space-between;max-width:1400px;margin:auto;padding:0 42px}
+.brand{display:flex;align-items:center;gap:13px}
+.brandmark{width:48px;height:48px;border-radius:15px;background:linear-gradient(145deg,var(--navy),var(--blue));color:white;display:grid;place-items:center;font-weight:900;font-size:22px;box-shadow:0 12px 26px rgba(18,50,77,.18)}
+.brand small{display:block;font-size:10px;letter-spacing:.17em;font-weight:800;color:var(--red)}
+.brand b{font-size:18px;color:var(--navy)}
+.localPill{background:#fff;border:1px solid var(--line);padding:10px 14px;border-radius:999px;font-size:12px;color:var(--muted)}
+.heroWrap{max-width:1400px;margin:auto;padding:38px 42px 72px;display:grid;grid-template-columns:1.08fr .92fr;gap:70px;align-items:center}
+.heroTag{display:inline-block;background:#eaf3fa;color:var(--blue);padding:8px 11px;border-radius:999px;font-size:10px;letter-spacing:.14em;font-weight:800}
+.hero h1{font-size:56px;line-height:1.03;letter-spacing:-.045em;color:var(--navy);margin:18px 0}
+.hero h1 span{color:var(--blue)}
+.hero p{font-size:18px;line-height:1.65;color:var(--muted);max-width:680px}
+.features{margin-top:28px;display:grid;gap:10px;max-width:660px}
+.feature{background:rgba(255,255,255,.78);border:1px solid rgba(226,235,241,.95);border-radius:15px;padding:14px 16px;display:flex;gap:13px;align-items:center}
+.featureIcon{width:40px;height:40px;border-radius:12px;background:#edf5fa;color:var(--blue);display:grid;place-items:center;font-weight:900}
+.feature b,.feature span{display:block}.feature b{font-size:13px;color:var(--navy)}.feature span{font-size:12px;color:var(--muted);margin-top:2px}
+.uploadCard{background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.95);border-radius:28px;padding:34px;box-shadow:0 32px 78px rgba(18,50,77,.14)}
+.uploadCard .kicker{font-size:10px;letter-spacing:.15em;color:var(--red);font-weight:800}
+.uploadCard h2{font-size:29px;color:var(--navy);margin:6px 0 18px}
+.dropzone{min-height:240px;border:1.5px dashed #aebfcd;border-radius:20px;background:#f8fbfd;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:.2s;text-align:center;padding:22px}
+.dropzone:hover{border-color:var(--blue);transform:translateY(-2px);background:#f2f8fc}
+.dropzone input{display:none}
+.dropIcon{width:62px;height:62px;border-radius:20px;background:#e7f1f8;color:var(--blue);display:grid;place-items:center;font-size:30px;font-weight:900}
+.dropzone strong{color:var(--navy);font-size:15px}.dropzone span{color:var(--muted);font-size:12px}
+.metaLabel{display:block;margin-top:18px;font-size:12px;font-weight:700;color:#536778}
+.moneyField{display:flex;align-items:center;border:1px solid var(--line);border-radius:13px;height:52px;margin-top:7px;background:#fff}
+.moneyField span{padding-left:15px;color:#8393a0;font-weight:700}
+.moneyField input{flex:1;border:0;outline:0;padding:0 14px;height:100%;background:transparent}
+.primary{width:100%;height:54px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--navy2),var(--blue));color:white;font-weight:800;margin-top:18px;box-shadow:0 14px 28px rgba(47,125,184,.21)}
+.primary:disabled{opacity:.38;cursor:not-allowed;box-shadow:none}
+.status{min-height:20px;margin-top:10px;font-size:12px;color:var(--muted)}.status.error{color:var(--red)}
+.privacy{border-top:1px solid var(--line);margin-top:12px;padding-top:14px;font-size:11px;color:var(--muted);text-align:center}
+
+/* app */
+#dashboardView{min-height:100vh}
+.sidebar{position:fixed;inset:0 auto 0 0;width:248px;background:linear-gradient(180deg,#12324d,#0d2234);color:white;padding:24px 16px;display:flex;flex-direction:column;z-index:30}
+.sideBrand{display:flex;gap:11px;align-items:center;padding:4px 8px 24px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sideBrand .brandmark{width:38px;height:38px;border-radius:12px;font-size:17px;background:linear-gradient(145deg,#2b6f9e,#3f8dc3)}
+.sideBrand small{display:block;color:#7cb5dc;font-size:9px;letter-spacing:.15em;font-weight:800}
+.sideBrand b{font-size:14px}
+.navTitle{font-size:9px;letter-spacing:.16em;color:#6d8aa0;font-weight:800;margin:22px 11px 8px}
+.nav a{display:block;text-decoration:none;color:#c3d0da;padding:11px 12px;border-radius:10px;font-size:13px;font-weight:600;margin:3px 0}
+.nav a:hover,.nav a.active{background:rgba(255,255,255,.09);color:white}
+.sideBottom{margin-top:auto;display:grid;gap:7px}
+.sideBottom button{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#d7e2e9;padding:10px 11px;border-radius:10px;text-align:left}
+.main{margin-left:248px}
+.appHeader{height:94px;background:white;border-bottom:1px solid var(--line);padding:18px 30px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.appHeader small{color:#8a99a5}.appHeader h1{margin:5px 0 2px;font-size:24px;color:var(--navy)}.appHeader p{margin:0;font-size:12px;color:var(--muted)}
+.dataPill{background:#edf8f2;color:#2c8158;padding:9px 12px;border-radius:999px;font-size:11px;font-weight:700}
+.content{padding:26px 30px 70px;max-width:1600px}
+.summaryHero{display:grid;grid-template-columns:1.3fr .65fr 1fr;gap:20px;background:linear-gradient(135deg,#163a59,#1f6396);border-radius:24px;padding:28px 30px;color:#fff;box-shadow:0 18px 40px rgba(18,50,77,.14)}
+.kicker{font-size:9px;letter-spacing:.16em;font-weight:800;color:#9fd0ef}
+.bigMoney{font-size:43px;font-weight:800;letter-spacing:-.035em;margin:10px 0 5px}
+.summarySub{font-size:12px;color:#c9deed}
+.variation{display:inline-flex;margin-top:18px;background:rgba(47,156,101,.2);color:#b8f0cf;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.variation.neg{background:rgba(215,77,77,.2);color:#ffd1d1}
+.ringWrap{display:grid;place-items:center}
+.ring{width:145px;height:145px;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(#83c8f5 0deg,rgba(255,255,255,.12) 0deg)}
+.ring:before{content:"";position:absolute;width:112px;height:112px;border-radius:50%;background:#1a4d74}
+.ring div{position:relative;z-index:2;text-align:center}.ring b{display:block;font-size:25px}.ring span{font-size:10px;color:#bdd8ea}
+.summaryStats{display:grid;align-content:center;gap:9px}
+.stat{display:flex;justify-content:space-between;gap:15px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.11)}.stat:last-child{border-bottom:0}
+.stat span{font-size:11px;color:#bdd7e8}.stat b{font-size:13px}
+.sectionHead{display:flex;align-items:flex-end;justify-content:space-between;margin:26px 0 13px}
+.sectionHead span{font-size:9px;letter-spacing:.16em;color:var(--blue);font-weight:800}.sectionHead h2{margin:5px 0 0;color:var(--navy);font-size:21px}.sectionHead small{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:white;border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 28px rgba(18,50,77,.06);overflow:hidden}
+.cardPad{padding:20px}
+.cardHead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px}.cardHead small{font-size:9px;letter-spacing:.14em;color:var(--blue);font-weight:800}.cardHead h3{margin:5px 0 0;color:var(--navy);font-size:16px}
+.rankList{display:grid;gap:7px}.rankItem{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;border-bottom:1px solid #f0f3f5;padding:9px 0}.rankItem:last-child{border-bottom:0}
+.rankNum{width:28px;height:28px;border-radius:9px;background:#f1f5f7;display:grid;place-items:center;font-size:11px;font-weight:800;color:#71818d}.rankItem:first-child .rankNum{background:#fff3d6;color:#b47e14}
+.rankName{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rankMoney{font-size:12px;font-weight:800;color:var(--navy)}
+.compare{display:grid;gap:18px;margin-top:8px}.cmp{display:grid;grid-template-columns:110px 1fr 105px;gap:10px;align-items:center}.cmpMeta span,.cmpMeta b{display:block}.cmpMeta span{font-size:10px;color:var(--muted)}.cmpMeta b{font-size:11px;margin-top:2px;color:#445d70}.track{height:13px;border-radius:999px;background:#eef2f5;overflow:hidden}.fill{height:100%;border-radius:999px;width:0}.fill.prev{background:#9dafbd}.fill.current{background:linear-gradient(90deg,#2f7db8,#6ab1e0)}.fill.goal{background:#d66c6c}.cmpVal{text-align:right;font-size:11px;font-weight:800;color:#34516a}
+.tableToolbar{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line)}.tableToolbar b{font-size:12px;color:var(--navy)}
+.smallBtn{border:0;background:#eaf3fa;color:var(--blue);padding:8px 10px;border-radius:9px;font-size:10px;font-weight:800}
+.tableWrap{overflow:auto}.tableWrap.tall{max-height:420px}
+table{width:100%;border-collapse:collapse;font-size:12px}th{position:sticky;top:0;background:#f8fafb;color:#6c7c89;font-size:9px;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:11px 13px;border-bottom:1px solid var(--line)}td{padding:11px 13px;border-bottom:1px solid #edf1f4;vertical-align:middle}tbody tr:hover{background:#fbfcfd}.money{text-align:right}
+.badge{display:inline-block;background:#fff0f0;color:var(--red);padding:6px 8px;border-radius:999px;font-size:9px;font-weight:800}
+.action{color:var(--blue);font-size:10px;font-weight:800}
+.visitGrid{display:grid;grid-template-columns:.65fr 1.35fr;gap:16px}
+.photoBox{height:250px;border:1.5px dashed #bccbd6;border-radius:15px;background:#f8fafb;display:grid;place-items:center;cursor:pointer;overflow:hidden;text-align:center;color:var(--muted)}.photoBox input{display:none}.photoBox img{display:none;max-width:100%;max-height:100%}.photoBox b{display:block;color:var(--navy);margin-top:7px}.photoBox span{font-size:10px}
+.editable input,.editable textarea,.editable select{width:100%;border:1px solid #d9e3ea;background:#fff;border-radius:8px;padding:7px 8px;outline:0;min-width:110px;font-size:11px}.editable textarea{min-height:36px;resize:vertical}.editable input:focus,.editable textarea:focus,.editable select:focus{border-color:#7baed1;box-shadow:0 0 0 3px rgba(47,125,184,.08)}
+.del{border:0;background:#fff0f0;color:var(--red);width:29px;height:29px;border-radius:8px;font-weight:800}
+.notes{width:100%;min-height:145px;border:1px solid var(--line);border-radius:13px;padding:13px;resize:vertical;outline:0}
+.empty{color:#99a8b3;font-style:italic}
+.mt{margin-top:27px}
+@media(max-width:1150px){.summaryHero{grid-template-columns:1fr .55fr}.summaryStats{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}.grid2,.visitGrid{grid-template-columns:1fr}}
+@media(max-width:900px){.heroWrap{grid-template-columns:1fr;padding:28px 22px 55px}.hero h1{font-size:40px}.topBrand{padding:0 22px}.sidebar{display:none}.main{margin-left:0}.content{padding:18px}}
+@media(max-width:650px){.hero h1{font-size:34px}.localPill{display:none}.summaryHero{grid-template-columns:1fr}.ringWrap{justify-content:start}.summaryStats{grid-template-columns:1fr}.appHeader{height:auto;padding:15px 18px}.dataPill{display:none}.cmp{grid-template-columns:1fr}.cmpVal{text-align:left}}
+@media print{.sidebar,.appHeader .dataPill,.smallBtn,.del{display:none!important}.main{margin-left:0}.appHeader{position:static}.content{padding:10px}.card,.summaryHero{box-shadow:none}}
+</style>
+</head>
+<body>
+
+<section id="uploadView">
+  <header class="topBrand">
+    <div class="brand"><div class="brandmark">T</div><div><small>TOYO FOODS</small><b>Sales Intelligence</b></div></div>
+    <div class="localPill">🔒 Procesamiento local</div>
   </header>
 
-  <main class="upload-layout">
-    <section class="hero">
-      <div class="hero-kicker">CONTROL COMERCIAL · SAP</div>
+  <main class="heroWrap">
+    <div class="hero">
+      <div class="heroTag">CONTROL COMERCIAL · SAP</div>
       <h1>Convierte tu archivo de SAP en un <span>dashboard ejecutivo.</span></h1>
-      <p>Sin fórmulas, sin tablas dinámicas y sin modificar el archivo. Solo cárgalo, captura la meta y revisa el avance comercial.</p>
-
-      <div class="feature-strip">
-        <div class="feature"><i data-lucide="trending-up"></i><div><b>Venta y avance</b><span>Meta, faltante y variación</span></div></div>
-        <div class="feature"><i data-lucide="users"></i><div><b>Clientes</b><span>Top 5 y recuperación</span></div></div>
-        <div class="feature"><i data-lucide="package-search"></i><div><b>Productos</b><span>Venta perdida vs mes anterior</span></div></div>
+      <p>Sin fórmulas y sin tablas dinámicas. El vendedor solo carga su archivo, captura la meta y obtiene el análisis del mes actual contra el mes anterior.</p>
+      <div class="features">
+        <div class="feature"><div class="featureIcon">↗</div><div><b>Venta y avance</b><span>Meta, faltante y variación contra el mes anterior</span></div></div>
+        <div class="feature"><div class="featureIcon">◎</div><div><b>Clientes</b><span>Top 5 y clientes que necesitan recuperación</span></div></div>
+        <div class="feature"><div class="featureIcon">□</div><div><b>Productos</b><span>Productos vendidos el mes pasado que no se han recuperado</span></div></div>
       </div>
-    </section>
+    </div>
 
-    <section class="upload-panel">
-      <div class="panel-title">
-        <span class="step-badge">01</span>
-        <div>
-          <p>INICIAR ANÁLISIS</p>
-          <h2>Cargar reporte SAP</h2>
-        </div>
-      </div>
-
+    <div class="uploadCard">
+      <div class="kicker">NUEVO ANÁLISIS</div>
+      <h2>Cargar reporte SAP</h2>
       <label class="dropzone" id="dropzone">
         <input id="fileInput" type="file" accept=".xlsx,.xls,.csv">
-        <div class="upload-icon"><i data-lucide="file-up"></i></div>
+        <div class="dropIcon">↑</div>
         <strong id="fileLabel">Arrastra tu archivo aquí</strong>
         <span>o haz clic para seleccionarlo</span>
-        <small>XLSX · XLS · CSV</small>
+        <span>XLSX · XLS · CSV</span>
       </label>
-
-      <div class="input-row">
-        <label>
-          <span>Meta del vendedor</span>
-          <div class="currency-field"><b>$</b><input id="metaInput" type="number" min="0" step="0.01" placeholder="0.00"></div>
-        </label>
-      </div>
-
-      <button id="analyzeBtn" class="main-btn" disabled>
-        <span>Generar dashboard</span><i data-lucide="arrow-right"></i>
-      </button>
+      <label class="metaLabel">Meta del vendedor</label>
+      <div class="moneyField"><span>$</span><input id="metaInput" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <button class="primary" id="analyzeBtn" disabled>Generar dashboard →</button>
       <div id="status" class="status"></div>
-
-      <div class="privacy">
-        <i data-lucide="lock-keyhole"></i>
-        <span>Tu archivo se procesa en este navegador. No se sube a ningún servidor.</span>
-      </div>
-    </section>
+      <div class="privacy">Tu archivo se procesa en este navegador y no se envía a un servidor.</div>
+    </div>
   </main>
+</section>
 
-  <footer class="landing-foot">Toyo Foods · Dashboard Comercial</footer>
+<section id="dashboardView" class="hidden">
+  <aside class="sidebar">
+    <div class="sideBrand"><div class="brandmark">T</div><div><small>TOYO FOODS</small><b>Sales Intelligence</b></div></div>
+    <div class="navTitle">GENERAL</div>
+    <nav class="nav"><a class="active" href="#resumen">Resumen</a><a href="#clientes">Clientes</a><a href="#productos">Productos</a></nav>
+    <div class="navTitle">SEGUIMIENTO</div>
+    <nav class="nav"><a href="#visitas">Visitas</a><a href="#pendientes">Pendientes</a><a href="#promociones">Promociones</a></nav>
+    <div class="sideBottom"><button id="newFileBtn">↥ Cargar otro archivo</button><button onclick="window.print()">▣ Imprimir / PDF</button></div>
+  </aside>
 
-  <script src="app.js"></script>
-  <script>lucide.createIcons();</script>
+  <div class="main">
+    <header class="appHeader">
+      <div><small>Dashboard / Resumen comercial</small><h1 id="pageTitle">Reporte mensual</h1><p id="pageSubtitle"></p></div>
+      <div class="dataPill">● Datos cargados</div>
+    </header>
+
+    <div class="content">
+      <section id="resumen">
+        <div class="summaryHero">
+          <div>
+            <div class="kicker">VENTA ACTUAL</div>
+            <div class="bigMoney" id="ventaActual">$0</div>
+            <div class="summarySub" id="corteActual"></div>
+            <div class="variation" id="variationChip"><span id="variacionPct">0%</span>&nbsp; · &nbsp;<span id="variacionDinero"></span></div>
+          </div>
+          <div class="ringWrap"><div class="ring" id="goalRing"><div><b id="avance">0%</b><span>de meta</span></div></div></div>
+          <div class="summaryStats">
+            <div class="stat"><span>Meta</span><b id="meta">$0</b></div>
+            <div class="stat"><span>Faltante</span><b id="restanteMeta">$0</b></div>
+            <div class="stat"><span>Mes anterior</span><b id="ventaAnterior">$0</b></div>
+          </div>
+        </div>
+
+        <div class="sectionHead"><div><span>DESEMPEÑO</span><h2>Indicadores principales</h2></div><small>Mes actual al corte vs mes anterior completo</small></div>
+        <div class="grid2">
+          <article class="card cardPad">
+            <div class="cardHead"><div><small>TOP CLIENTES</small><h3>Top 5 por venta</h3></div><div>♕</div></div>
+            <div class="rankList" id="topClients"></div>
+          </article>
+          <article class="card cardPad">
+            <div class="cardHead"><div><small>COMPARATIVO</small><h3>Venta mensual</h3></div><div>▥</div></div>
+            <div class="compare">
+              <div class="cmp"><div class="cmpMeta"><span>Mes anterior</span><b id="prevLabel"></b></div><div class="track"><div class="fill prev" id="barPrev"></div></div><div class="cmpVal" id="barPrevVal"></div></div>
+              <div class="cmp"><div class="cmpMeta"><span>Mes actual</span><b id="currentLabel"></b></div><div class="track"><div class="fill current" id="barCurrent"></div></div><div class="cmpVal" id="barCurrentVal"></div></div>
+              <div class="cmp"><div class="cmpMeta"><span>Meta</span><b>Objetivo</b></div><div class="track"><div class="fill goal" id="barMeta"></div></div><div class="cmpVal" id="barMetaVal"></div></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="clientes" class="mt">
+        <div class="sectionHead"><div><span>RECUPERACIÓN</span><h2>Clientes sin compra</h2></div><small>Compraron el mes pasado y aún no compran</small></div>
+        <article class="card">
+          <div class="tableToolbar"><b>Oportunidades de recuperación</b><span class="badge">Seguimiento comercial</span></div>
+          <div class="tableWrap tall"><table><thead><tr><th>Cliente</th><th>Venta mes anterior</th><th>Venta actual</th><th>Estado</th></tr></thead><tbody id="lostClients"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="productos" class="mt">
+        <div class="sectionHead"><div><span>PORTAFOLIO</span><h2>Productos sin venta</h2></div><small>Vendidos el mes pasado y aún no vendidos</small></div>
+        <article class="card">
+          <div class="tableToolbar"><b>Productos por recuperar</b><span class="badge">Oportunidad</span></div>
+          <div class="tableWrap tall"><table><thead><tr><th>Código</th><th>Producto</th><th>Piezas ant.</th><th>Venta ant.</th><th>Acción</th></tr></thead><tbody id="lostProducts"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="visitas" class="mt">
+        <div class="sectionHead"><div><span>ACTIVIDAD COMERCIAL</span><h2>Visitas</h2></div><small>Esta información sí se puede escribir y editar</small></div>
+        <div class="visitGrid">
+          <article class="card cardPad">
+            <div class="cardHead"><div><small>COBERTURA</small><h3>% de visitas</h3></div><div>▧</div></div>
+            <label class="photoBox"><input id="photoInput" type="file" accept="image/*"><img id="photoPreview"><div id="photoPlaceholder"><div style="font-size:26px">＋</div><b>Cargar captura</b><span>PNG o JPG</span></div></label>
+          </article>
+          <article class="card">
+            <div class="tableToolbar"><b>Visitas destacadas</b><button class="smallBtn" id="addVisit">+ Agregar fila</button></div>
+            <div class="tableWrap"><table class="editable"><thead><tr><th>Fecha</th><th>Cliente</th><th>Comentarios</th><th>Tipo</th><th></th></tr></thead><tbody id="visitsBody"></tbody></table></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="pendientes" class="mt">
+        <div class="sectionHead"><div><span>GESTIÓN</span><h2>Pendientes y seguimientos</h2></div></div>
+        <article class="card">
+          <div class="tableToolbar"><b>Plan de seguimiento</b><button class="smallBtn" id="addPending">+ Agregar fila</button></div>
+          <div class="tableWrap"><table class="editable"><thead><tr><th>Pendiente</th><th>Seguimiento</th><th></th></tr></thead><tbody id="pendingBody"></tbody></table></div>
+        </article>
+      </section>
+
+      <section id="promociones" class="mt">
+        <div class="sectionHead"><div><span>FOCO DE VENTA</span><h2>Promociones / productos a promocionar</h2></div><small>Escribe el código y se muestran piezas y venta actual</small></div>
+        <article class="card">
+          <div class="tableToolbar"><b>Productos a impulsar</b><button class="smallBtn" id="addPromo">+ Agregar fila</button></div>
+          <div class="tableWrap"><table class="editable"><thead><tr><th>Código</th><th>Descripción</th><th>Piezas</th><th>Venta actual</th><th>Comentario / acción</th><th></th></tr></thead><tbody id="promoBody"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="mt">
+        <div class="sectionHead"><div><span>NOTAS</span><h2>Comentarios generales</h2></div></div>
+        <article class="card cardPad"><textarea class="notes" id="generalNotes" placeholder="Escribe aquí acuerdos, solicitudes, problemas o apoyos requeridos..."></textarea></article>
+      </section>
+    </div>
+  </div>
+</section>
+
+<script>
+const q=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:2}).format(Number(n||0));
+const pct=n=>`${(Number(n||0)*100).toFixed(1)}%`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s+/g,' ');
+const num=v=>{if(typeof v==='number')return Number.isFinite(v)?v:0;const n=Number(String(v??'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
+let file=null,data=null;
+
+function parseDate(v){
+ if(v instanceof Date&&!isNaN(v))return v;
+ if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}
+ const s=String(v??'').trim(); if(!s)return null;
+ const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+ if(m){let y=+m[3];if(y<100)y+=2000;return new Date(y,+m[2]-1,+m[1])}
+ const d=new Date(s);return isNaN(d)?null:d;
+}
+function col(headers,cands){
+ const nh=headers.map(norm);
+ for(const c of cands){const i=nh.indexOf(norm(c));if(i>=0)return headers[i]}
+ for(let i=0;i<nh.length;i++)if(cands.some(c=>nh[i].includes(norm(c))))return headers[i];
+ return null;
+}
+function labelMonth(d){return d.toLocaleDateString('es-MX',{month:'long',year:'numeric'})}
+
+function handleFile(f){
+ file=f;q('fileLabel').textContent=f?f.name:'Arrastra tu archivo aquí';
+ q('analyzeBtn').disabled=!f;q('status').textContent='';q('status').className='status';
+}
+q('fileInput').addEventListener('change',e=>handleFile(e.target.files[0]));
+q('dropzone').addEventListener('dragover',e=>{e.preventDefault();q('dropzone').style.borderColor='#2f7db8'});
+q('dropzone').addEventListener('dragleave',()=>q('dropzone').style.borderColor='');
+q('dropzone').addEventListener('drop',e=>{e.preventDefault();q('dropzone').style.borderColor='';if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});
+
+q('analyzeBtn').addEventListener('click',async()=>{
+ try{
+  if(!window.XLSX)throw new Error('No se pudo cargar el lector de Excel. Revisa tu conexión a internet.');
+  q('analyzeBtn').disabled=true;q('status').textContent='Analizando archivo...';
+  const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:null,raw:true});
+  if(!rows.length)throw new Error('El archivo no contiene registros.');
+  const h=Object.keys(rows[0]);
+  const c={
+   date:col(h,['FECHA DE CONTABILIZACION','FECHA CONTABILIZACION','FECHA']),
+   client:col(h,['NOMBRE DE CLIENTE','CLIENTE']),
+   code:col(h,['CODIGO DE PRODUCTO','CODIGO PRODUCTO','CÓDIGO DE PRODUCTO']),
+   desc:col(h,['DESCRIPCION DE PRODUCTO','DESCRIPCIÓN DE PRODUCTO','PRODUCTO']),
+   pieces:col(h,['TOTAL DE PIEZAS','PIEZAS']),
+   subtotal:col(h,['SUBTOTAL'])
+  };
+  const miss=Object.entries(c).filter(([,v])=>!v).map(([k])=>k);if(miss.length)throw new Error('No pude identificar columnas: '+miss.join(', '));
+  const valid=rows.map(r=>({r,d:parseDate(r[c.date])})).filter(x=>x.d);if(!valid.length)throw new Error('No pude leer fechas válidas.');
+  const maxDate=new Date(Math.max(...valid.map(x=>x.d.getTime()))),curStart=new Date(maxDate.getFullYear(),maxDate.getMonth(),1),prevStart=new Date(maxDate.getFullYear(),maxDate.getMonth()-1,1),prevEnd=new Date(maxDate.getFullYear(),maxDate.getMonth(),0,23,59,59);
+  const clients={},products={};let cur=0,prev=0;
+  for(const {r,d} of valid){
+   const sub=num(r[c.subtotal]),pcs=num(r[c.pieces]),client=String(r[c.client]??'').trim(),code=String(r[c.code]??'').trim(),desc=String(r[c.desc]??'').trim();
+   const isCur=d>=curStart&&d<=maxDate,isPrev=d>=prevStart&&d<=prevEnd;if(!isCur&&!isPrev)continue;
+   if(isCur)cur+=sub;if(isPrev)prev+=sub;
+   if(client){clients[client]??={current:0,prev:0};if(isCur)clients[client].current+=sub;if(isPrev)clients[client].prev+=sub}
+   if(code){products[code]??={desc,currentMoney:0,prevMoney:0,currentPieces:0,prevPieces:0};if(!products[code].desc&&desc)products[code].desc=desc;if(isCur){products[code].currentMoney+=sub;products[code].currentPieces+=pcs}if(isPrev){products[code].prevMoney+=sub;products[code].prevPieces+=pcs}}
+  }
+  data={
+   maxDate:maxDate.toISOString(),labels:{current:labelMonth(maxDate),prev:labelMonth(prevStart)},
+   totals:{current:cur,prev,meta:num(q('metaInput').value)},products,
+   topClients:Object.entries(clients).filter(([,v])=>v.current>0).sort((a,b)=>b[1].current-a[1].current).slice(0,5).map(([name,v])=>({name,value:v.current})),
+   lostClients:Object.entries(clients).filter(([,v])=>v.prev>0&&v.current===0).sort((a,b)=>b[1].prev-a[1].prev).map(([name,v])=>({name,prev:v.prev,current:v.current})),
+   lostProducts:Object.entries(products).filter(([,v])=>v.prevMoney>0&&v.currentMoney===0).sort((a,b)=>b[1].prevMoney-a[1].prevMoney).map(([code,v])=>({code,desc:v.desc,prevPieces:v.prevPieces,prevMoney:v.prevMoney}))
+  };
+  localStorage.setItem('toyoSingleData',JSON.stringify(data));
+  renderDashboard();
+ }catch(err){
+  console.error(err);q('status').textContent=err.message||'No fue posible analizar el archivo.';q('status').className='status error';q('analyzeBtn').disabled=false;
+ }
+});
+
+function renderDashboard(){
+ data=data||JSON.parse(localStorage.getItem('toyoSingleData')||'null');if(!data)return;
+ q('uploadView').classList.add('hidden');q('dashboardView').classList.remove('hidden');window.scrollTo(0,0);
+ const cur=data.totals.current||0,prev=data.totals.prev||0,meta=data.totals.meta||0,diff=cur-prev,diffPct=prev?diff/prev:0,adv=meta?cur/meta:0,remain=Math.max(meta-cur,0),mx=Math.max(cur,prev,meta,1);
+ q('pageTitle').textContent=data.labels.current.replace(/^\w/,c=>c.toUpperCase());q('pageSubtitle').textContent='Comparación contra '+data.labels.prev;
+ q('ventaActual').textContent=money(cur);q('ventaAnterior').textContent=money(prev);q('meta').textContent=money(meta);q('restanteMeta').textContent=money(remain);q('avance').textContent=pct(adv);
+ q('corteActual').textContent='Corte al '+new Date(data.maxDate).toLocaleDateString('es-MX');q('variacionPct').textContent=(diffPct>=0?'+':'')+pct(diffPct);q('variacionDinero').textContent=(diff>=0?'+':'')+money(diff);
+ q('variationChip').classList.toggle('neg',diffPct<0);const deg=Math.min(Math.max(adv,0),1)*360;q('goalRing').style.background=`conic-gradient(#83c8f5 0deg,#83c8f5 ${deg}deg,rgba(255,255,255,.12) ${deg}deg 360deg)`;
+ q('prevLabel').textContent=data.labels.prev;q('currentLabel').textContent=data.labels.current;q('barPrev').style.width=(prev/mx*100)+'%';q('barCurrent').style.width=(cur/mx*100)+'%';q('barMeta').style.width=(meta/mx*100)+'%';q('barPrevVal').textContent=money(prev);q('barCurrentVal').textContent=money(cur);q('barMetaVal').textContent=money(meta);
+ q('topClients').innerHTML=(data.topClients||[]).map((x,i)=>`<div class="rankItem"><div class="rankNum">${i+1}</div><div class="rankName">${esc(x.name)}</div><div class="rankMoney">${money(x.value)}</div></div>`).join('')||'<div class="empty">Sin información</div>';
+ q('lostClients').innerHTML=(data.lostClients||[]).map(x=>`<tr><td>${esc(x.name)}</td><td class="money">${money(x.prev)}</td><td class="money">${money(x.current)}</td><td><span class="badge">Sin compra</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">No hay clientes pendientes</td></tr>';
+ q('lostProducts').innerHTML=(data.lostProducts||[]).map(x=>`<tr><td>${esc(x.code)}</td><td>${esc(x.desc)}</td><td class="money">${Number(x.prevPieces||0).toLocaleString('es-MX')}</td><td class="money">${money(x.prevMoney)}</td><td><span class="action">RECUPERAR</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay productos pendientes</td></tr>';
+ renderVisits();renderPending();renderPromos();q('generalNotes').value=localStorage.getItem('toyoSingleNotes')||'';
+ const ph=localStorage.getItem('toyoSinglePhoto');if(ph){q('photoPreview').src=ph;q('photoPreview').style.display='block';q('photoPlaceholder').style.display='none'}
+}
+
+let visits=load('toyoSingleVisits',Array.from({length:5},()=>({date:'',client:'',comments:'',type:''})));
+function renderVisits(){q('visitsBody').innerHTML=visits.map((v,i)=>`<tr><td><input type="date" data-t="v" data-i="${i}" data-f="date" value="${esc(v.date)}"></td><td><input data-t="v" data-i="${i}" data-f="client" value="${esc(v.client)}" placeholder="Cliente"></td><td><textarea data-t="v" data-i="${i}" data-f="comments" placeholder="Comentarios">${esc(v.comments)}</textarea></td><td><select data-t="v" data-i="${i}" data-f="type"><option></option><option ${v.type==='Recuperación'?'selected':''}>Recuperación</option><option ${v.type==='Upgrade'?'selected':''}>Upgrade</option></select></td><td><button class="del" data-dv="${i}">×</button></td></tr>`).join('')}
+q('visitsBody').addEventListener('input',e=>{if(e.target.dataset.t!=='v')return;visits[+e.target.dataset.i][e.target.dataset.f]=e.target.value;save('toyoSingleVisits',visits)});
+q('visitsBody').addEventListener('click',e=>{if(e.target.dataset.dv===undefined)return;visits.splice(+e.target.dataset.dv,1);save('toyoSingleVisits',visits);renderVisits()});
+q('addVisit').onclick=()=>{visits.push({date:'',client:'',comments:'',type:''});save('toyoSingleVisits',visits);renderVisits()};
+
+let pending=load('toyoSinglePending',Array.from({length:5},()=>({pending:'',follow:''})));
+function renderPending(){q('pendingBody').innerHTML=pending.map((v,i)=>`<tr><td><textarea data-t="p" data-i="${i}" data-f="pending" placeholder="Pendiente">${esc(v.pending)}</textarea></td><td><textarea data-t="p" data-i="${i}" data-f="follow" placeholder="Seguimiento">${esc(v.follow)}</textarea></td><td><button class="del" data-dp="${i}">×</button></td></tr>`).join('')}
+q('pendingBody').addEventListener('input',e=>{if(e.target.dataset.t!=='p')return;pending[+e.target.dataset.i][e.target.dataset.f]=e.target.value;save('toyoSinglePending',pending)});
+q('pendingBody').addEventListener('click',e=>{if(e.target.dataset.dp===undefined)return;pending.splice(+e.target.dataset.dp,1);save('toyoSinglePending',pending);renderPending()});
+q('addPending').onclick=()=>{pending.push({pending:'',follow:''});save('toyoSinglePending',pending);renderPending()};
+
+let promos=load('toyoSinglePromos',Array.from({length:5},()=>({code:'',note:''})));
+function renderPromos(){q('promoBody').innerHTML=promos.map((v,i)=>{const p=data?.products?.[v.code]||{};return `<tr><td><input data-t="r" data-i="${i}" data-f="code" value="${esc(v.code)}" placeholder="Código"></td><td>${esc(p.desc||'')}</td><td class="money">${p.currentPieces!=null?Number(p.currentPieces).toLocaleString('es-MX'):''}</td><td class="money">${p.currentMoney!=null?money(p.currentMoney):''}</td><td><textarea data-t="r" data-i="${i}" data-f="note" placeholder="Comentario / acción">${esc(v.note||'')}</textarea></td><td><button class="del" data-dr="${i}">×</button></td></tr>`}).join('')}
+q('promoBody').addEventListener('input',e=>{if(e.target.dataset.t!=='r')return;promos[+e.target.dataset.i][e.target.dataset.f]=e.target.value;save('toyoSinglePromos',promos);if(e.target.dataset.f==='code')renderPromos()});
+q('promoBody').addEventListener('click',e=>{if(e.target.dataset.dr===undefined)return;promos.splice(+e.target.dataset.dr,1);save('toyoSinglePromos',promos);renderPromos()});
+q('addPromo').onclick=()=>{promos.push({code:'',note:''});save('toyoSinglePromos',promos);renderPromos()};
+
+q('generalNotes').addEventListener('input',()=>localStorage.setItem('toyoSingleNotes',q('generalNotes').value));
+q('photoInput').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{q('photoPreview').src=r.result;q('photoPreview').style.display='block';q('photoPlaceholder').style.display='none';try{localStorage.setItem('toyoSinglePhoto',r.result)}catch{}};r.readAsDataURL(f)});
+q('newFileBtn').onclick=()=>{q('dashboardView').classList.add('hidden');q('uploadView').classList.remove('hidden');window.scrollTo(0,0)};
+</script>
 </body>
 </html>
