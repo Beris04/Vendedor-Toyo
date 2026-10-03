@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toyo Foods | Dashboard Comercial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="app-body">
+  <aside class="sidebar">
+    <div class="side-logo">
+      <div class="logo-mark mini">T</div>
+      <div><div class="logo-small white">TOYO FOODS</div><div class="side-title">Sales Intelligence</div></div>
+    </div>
+
+    <div class="nav-label">GENERAL</div>
+    <nav class="side-nav">
+      <a class="active" href="#resumen"><i data-lucide="layout-dashboard"></i><span>Resumen</span></a>
+      <a href="#clientes"><i data-lucide="users"></i><span>Clientes</span></a>
+      <a href="#productos"><i data-lucide="boxes"></i><span>Productos</span></a>
+    </nav>
+
+    <div class="nav-label">SEGUIMIENTO</div>
+    <nav class="side-nav">
+      <a href="#visitas"><i data-lucide="map-pin-check"></i><span>Visitas</span></a>
+      <a href="#pendientes"><i data-lucide="clipboard-list"></i><span>Pendientes</span></a>
+      <a href="#promociones"><i data-lucide="badge-percent"></i><span>Promociones</span></a>
+    </nav>
+
+    <div class="side-spacer"></div>
+
+    <div class="side-actions">
+      <button onclick="location.href='index.html'"><i data-lucide="upload"></i> Cargar otro archivo</button>
+      <button onclick="window.print()"><i data-lucide="printer"></i> Imprimir / PDF</button>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <header class="app-header">
+      <div>
+        <div class="breadcrumb">Dashboard / <b>Resumen comercial</b></div>
+        <h1 id="pageTitle">Reporte mensual</h1>
+        <p id="pageSubtitle">Comparación mensual</p>
+      </div>
+      <div class="header-actions">
+        <div class="data-pill"><span></span> Datos cargados</div>
+        <div class="date-pill"><i data-lucide="calendar-days"></i><span id="headerDate"></span></div>
+      </div>
+    </header>
+
+    <div class="app-content">
+      <section id="resumen">
+        <div class="hero-summary">
+          <div class="hero-summary-left">
+            <div class="summary-kicker">VENTA ACTUAL</div>
+            <div class="summary-value" id="ventaActual">$0</div>
+            <div class="summary-sub" id="corteActual"></div>
+            <div class="summary-compare">
+              <div id="variationChip" class="variation-chip"><i data-lucide="arrow-up-right"></i><span id="variacionPct">0%</span></div>
+              <span id="variacionDinero"></span>
+            </div>
+          </div>
+
+          <div class="goal-ring-wrap">
+            <div class="goal-ring" id="goalRing"><div><b id="avance">0%</b><span>de meta</span></div></div>
+          </div>
+
+          <div class="hero-summary-right">
+            <div class="summary-stat"><span>Meta</span><b id="meta">$0</b></div>
+            <div class="summary-stat"><span>Faltante</span><b id="restanteMeta">$0</b></div>
+            <div class="summary-stat"><span>Mes anterior</span><b id="ventaAnterior">$0</b></div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div><span>DESEMPEÑO</span><h2>Indicadores principales</h2></div>
+          <div class="section-note">Mes actual al corte vs mes anterior completo</div>
+        </div>
+
+        <div class="insight-grid">
+          <article class="premium-card">
+            <div class="card-head">
+              <div><span class="eyebrow">TOP CLIENTES</span><h3>Top 5 por venta</h3></div>
+              <div class="icon-box blue"><i data-lucide="crown"></i></div>
+            </div>
+            <div class="rank-list" id="topClients"></div>
+          </article>
+
+          <article class="premium-card">
+            <div class="card-head">
+              <div><span class="eyebrow">COMPARATIVO</span><h3>Venta mensual</h3></div>
+              <div class="icon-box green"><i data-lucide="chart-no-axes-column-increasing"></i></div>
+            </div>
+            <div class="comparison-bars">
+              <div class="cmp-row">
+                <div class="cmp-meta"><span>Mes anterior</span><b id="prevLabel"></b></div>
+                <div class="cmp-track"><div id="barPrev" class="cmp-fill muted"></div></div>
+                <div id="barPrevVal" class="cmp-value"></div>
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-meta"><span>Mes actual</span><b id="currentLabel"></b></div>
+                <div class="cmp-track"><div id="barCurrent" class="cmp-fill blue"></div></div>
+                <div id="barCurrentVal" class="cmp-value"></div>
+              </div>
+              <div class="cmp-row">
+                <div class="cmp-meta"><span>Meta</span><b>Objetivo</b></div>
+                <div class="cmp-track"><div id="barMeta" class="cmp-fill red"></div></div>
+                <div id="barMetaVal" class="cmp-value"></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="clientes" class="content-section">
+        <div class="section-head">
+          <div><span>RECUPERACIÓN</span><h2>Clientes sin compra</h2></div>
+          <div class="section-note">Compraron el mes pasado y aún no compran este mes</div>
+        </div>
+        <article class="premium-card no-pad">
+          <div class="table-toolbar">
+            <div><i data-lucide="user-round-x"></i><b>Oportunidades de recuperación</b></div>
+            <span class="soft-tag red">Seguimiento comercial</span>
+          </div>
+          <div class="modern-table-wrap tall">
+            <table class="modern-table">
+              <thead><tr><th>Cliente</th><th>Venta mes anterior</th><th>Venta actual</th><th>Estado</th></tr></thead>
+              <tbody id="lostClients"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="productos" class="content-section">
+        <div class="section-head">
+          <div><span>PORTAFOLIO</span><h2>Productos sin venta</h2></div>
+          <div class="section-note">Productos vendidos el mes pasado y aún no vendidos</div>
+        </div>
+        <article class="premium-card no-pad">
+          <div class="table-toolbar">
+            <div><i data-lucide="package-x"></i><b>Productos por recuperar</b></div>
+            <span class="soft-tag amber">Oportunidad</span>
+          </div>
+          <div class="modern-table-wrap tall">
+            <table class="modern-table">
+              <thead><tr><th>Código</th><th>Producto</th><th>Piezas ant.</th><th>Venta ant.</th><th>Acción</th></tr></thead>
+              <tbody id="lostProducts"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="visitas" class="content-section">
+        <div class="section-head">
+          <div><span>ACTIVIDAD COMERCIAL</span><h2>Visitas</h2></div>
+          <div class="section-note">La información que captures se guarda en el navegador</div>
+        </div>
+
+        <div class="visit-grid">
+          <article class="premium-card">
+            <div class="card-head">
+              <div><span class="eyebrow">COBERTURA</span><h3>% de visitas</h3></div>
+              <div class="icon-box purple"><i data-lucide="image-up"></i></div>
+            </div>
+            <label class="photo-uploader">
+              <input id="photoInput" type="file" accept="image/*">
+              <img id="photoPreview" alt="">
+              <div id="photoPlaceholder">
+                <div class="upload-mini"><i data-lucide="image-plus"></i></div>
+                <b>Cargar captura</b>
+                <span>PNG o JPG</span>
+              </div>
+            </label>
+          </article>
+
+          <article class="premium-card no-pad">
+            <div class="table-toolbar">
+              <div><i data-lucide="map-pinned"></i><b>Visitas destacadas</b></div>
+              <button class="small-btn" id="addVisit"><i data-lucide="plus"></i> Agregar fila</button>
+            </div>
+            <div class="modern-table-wrap">
+              <table class="modern-table editable">
+                <thead><tr><th>Fecha</th><th>Cliente</th><th>Comentarios</th><th>Tipo</th><th></th></tr></thead>
+                <tbody id="visitsBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="pendientes" class="content-section">
+        <div class="section-head">
+          <div><span>GESTIÓN</span><h2>Pendientes y seguimientos</h2></div>
+        </div>
+        <article class="premium-card no-pad">
+          <div class="table-toolbar">
+            <div><i data-lucide="list-checks"></i><b>Plan de seguimiento</b></div>
+            <button class="small-btn" id="addPending"><i data-lucide="plus"></i> Agregar fila</button>
+          </div>
+          <div class="modern-table-wrap">
+            <table class="modern-table editable">
+              <thead><tr><th>Pendiente</th><th>Seguimiento</th><th></th></tr></thead>
+              <tbody id="pendingBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="promociones" class="content-section">
+        <div class="section-head">
+          <div><span>FOCO DE VENTA</span><h2>Promociones / productos a promocionar</h2></div>
+          <div class="section-note">Escribe el código y la app recupera automáticamente la venta del mes</div>
+        </div>
+        <article class="premium-card no-pad">
+          <div class="table-toolbar">
+            <div><i data-lucide="badge-percent"></i><b>Productos a impulsar</b></div>
+            <button class="small-btn" id="addPromo"><i data-lucide="plus"></i> Agregar fila</button>
+          </div>
+          <div class="modern-table-wrap">
+            <table class="modern-table editable">
+              <thead><tr><th>Código</th><th>Descripción</th><th>Piezas</th><th>Venta actual</th><th>Comentario / acción</th><th></th></tr></thead>
+              <tbody id="promoBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="content-section">
+        <div class="section-head">
+          <div><span>NOTAS</span><h2>Comentarios generales</h2></div>
+        </div>
+        <article class="premium-card">
+          <textarea id="generalNotes" class="general-notes" placeholder="Escribe aquí solicitudes, acuerdos, problemas, apoyos requeridos o cualquier comentario importante..."></textarea>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script src="dashboard.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

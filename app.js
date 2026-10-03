@@ -1,51 +1,85 @@
-const CONFIG=window.ATN_CONFIG||{}; const HAS_SUPA=!!(CONFIG.supabaseUrl&&CONFIG.supabaseAnonKey&&window.supabase);
-const supa=HAS_SUPA?window.supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabaseAnonKey):null;
-let DB=window.ATN_DATA||{clients:[],catalog:[],categories:[],meta:{}};let currentClient=null;let order=[];let saved=[];let prodCache={};let prodSeq=0;
 
-function checkAppLogin(){
- const ok=sessionStorage.getItem('atn_logged')==='1';
- const gate=document.getElementById('loginGate');
- const app=document.querySelector('.app');
- if(gate) gate.style.display=ok?'none':'flex';
- if(app) app.style.display=ok?'grid':'none';
-}
-function doLogin(){
- const u=(document.getElementById('loginUser')?.value||'').trim().toUpperCase();
- const p=(document.getElementById('loginPass')?.value||'').trim();
- if(u==='ATN'&&p==='Toyo2026'){
-   sessionStorage.setItem('atn_logged','1');
-   checkAppLogin();
-   toast('Bienvenido a ATN Clientes');
- }else{
-   alert('Usuario o contraseña incorrectos');
- }
-}
-function logout(){sessionStorage.removeItem('atn_logged');checkAppLogin();}
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('loginGate')?.style.display!=='none')doLogin()});
+const fileInput=document.getElementById('fileInput');
+const fileLabel=document.getElementById('fileLabel');
+const analyzeBtn=document.getElementById('analyzeBtn');
+const metaInput=document.getElementById('metaInput');
+const statusBox=document.getElementById('status');
+const dropzone=document.getElementById('dropzone');
+let selectedFile=null;
 
-function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
-function showSec(id,btn){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');if(id==='seguimiento')renderFollow();if(id==='configuracion')renderConfig()}
-function pct(n,d){return d?Math.round(n*1000/d)/10:0}function short(s,n=42){s=s||'';return s.length>n?s.slice(0,n)+'...':s}function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-async function loadOrders(){if(HAS_SUPA){const {data,error}=await supa.from('orders').select('*,order_items(*)').order('created_at',{ascending:false}).limit(500);if(!error&&data){saved=data.map(o=>({date:o.created_at,user:o.attended_by,client:o.client_name,code:o.client_code,comments:o.comments||'',items:(o.order_items||[]).map(i=>({code:i.product_code,desc:i.product_desc,category:i.category,qty:i.qty,type:i.item_type}))}));return}}saved=JSON.parse(localStorage.getItem('atn_orders_v1')||'[]')}
-async function init(){await loadOrders();['dashClient','orderClient'].forEach(id=>{let el=document.getElementById(id);el.innerHTML='<option value="">Todos los clientes</option>'+DB.clients.map((c,i)=>`<option value="${i}">${esc(c.name)}</option>`).join('')});document.getElementById('catalogCat').innerHTML='<option value="">Todas las categorías</option>'+DB.categories.map(c=>`<option>${esc(c)}</option>`).join('');currentClient=DB.clients[0]||{};renderDashboard();renderClientList();selectClient(0);selectOrderClient();renderFollow();renderConfig()}
-function selectedDashClients(){let v=document.getElementById('dashClient').value;return v===''?DB.clients:[DB.clients[+v]]}
-function renderKpis(cs){let active=0,lost=0,coverage=0;cs.forEach(c=>{active+=(c.activeCategories||[]).length;lost+=(c.lostCategories||[]).length;coverage+=Number(c.coverage||0)});let recovered=saved.reduce((a,o)=>a+(o.items||[]).filter(i=>i.type==='Recuperado').length,0);let avgCoverage=cs.length?Math.round((coverage/cs.length)*10)/10:0;document.getElementById('kpis').innerHTML=[['TOTAL CATEGORÍAS',DB.categories.length,'Activas en catálogo',''],['CLIENTES ANALIZADOS',cs.length,'Con historial Ene–Jun',''],['CATEGORÍAS CON PÉRDIDA',lost,'Eventos por cliente','red'],['PRODUCTOS RECUPERADOS',recovered,'Capturados en pedidos','green'],['COBERTURA PROMEDIO',avgCoverage+'%','Categorías compradas','']].map(k=>`<div class="card kpi ${k[3]}"><div class="label">${k[0]}</div><div class="num">${k[1]}</div><div class="hint">${k[2]}</div></div>`).join('')}
-function bars(rows,color=''){return rows.slice(0,10).map(r=>`<div class="barrow"><b title="${esc(r.name)}">${esc(short(r.name,28))}</b><div class="bar ${color}"><i style="width:${Math.min(100,r.pct*2.5)}%"></i></div><b>${r.pct}%</b></div>`).join('')||'<div class="note">Sin información</div>'}
-function renderDashboard(){let cs=selectedDashClients();renderKpis(cs);let lost=new Map(),act=new Map(),giro=new Map();cs.forEach(c=>{(c.lostCategories||[]).forEach(x=>lost.set(x,(lost.get(x)||0)+1));(c.activeCategories||[]).forEach(x=>act.set(x,(act.get(x)||0)+1));giro.set(c.giro||'SIN GIRO',(giro.get(c.giro||'SIN GIRO')||0)+(c.lostCategories||[]).length)});let lostTotal=[...lost.values()].reduce((a,b)=>a+b,0)||1,actTotal=[...act.values()].reduce((a,b)=>a+b,0)||1,giroTotal=[...giro.values()].reduce((a,b)=>a+b,0)||1;let lostRows=[...lost].sort((a,b)=>b[1]-a[1]).map(([name,value])=>({name,value,pct:pct(value,lostTotal)}));let actRows=[...act].sort((a,b)=>b[1]-a[1]).map(([name,value])=>({name,value,pct:pct(value,actTotal)}));let giroRows=[...giro].sort((a,b)=>b[1]-a[1]).map(([name,value])=>({name,value,pct:pct(value,giroTotal)}));document.getElementById('lostBars').innerHTML=bars(lostRows);document.getElementById('activeBars').innerHTML=bars(actRows,'green');document.getElementById('donut').setAttribute('data-center',`${giroTotal}\A oportunidades`);document.getElementById('giroLegend').innerHTML=giroRows.slice(0,8).map(r=>`<div class="barrow" style="grid-template-columns:1fr 60px"><b>${esc(r.name)}</b><b>${r.pct}%</b></div>`).join('');document.getElementById('lostTable').innerHTML='<tr><th>Categoría</th><th>Clientes sin compra</th><th>%</th></tr>'+lostRows.slice(0,16).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${r.value}</td><td>${r.pct}%</td></tr>`).join('');let risks=cs.map(c=>({name:c.name,code:c.code,lost:(c.lostCategories||[]).length,total:(c.allCategories||[]).length,risk:pct((c.lostCategories||[]).length,(c.allCategories||[]).length)})).sort((a,b)=>b.risk-a.risk).slice(0,15);document.getElementById('riskTable').innerHTML='<tr><th>Cliente</th><th>Perdidas</th><th>Riesgo</th></tr>'+risks.map(r=>`<tr><td><b>${esc(r.name)}</b><br><span class="small">${esc(r.code)}</span></td><td>${r.lost}/${r.total}</td><td>${r.risk}%</td></tr>`).join('')}
-function renderClientList(){let q=(document.getElementById('clientSearch').value||'').toUpperCase();let rows=DB.clients.map((c,i)=>({c,i})).filter(x=>!q||(x.c.name||'').includes(q)||(x.c.code||'').includes(q));document.getElementById('clientList').innerHTML=rows.map(x=>`<div class="clientItem ${currentClient===x.c?'active':''}" onclick="selectClient(${x.i})"><b>${esc(x.c.name)}</b><span>${esc(x.c.code)} · ${esc(x.c.giro)}</span><span>Compradas: ${(x.c.activeCategories||[]).length} · Perdidas: ${(x.c.lostCategories||[]).length}</span></div>`).join('')}
-function selectClient(i){currentClient=DB.clients[i]||{};renderClientList();let c=currentClient;document.getElementById('clientDetail').innerHTML=`<h2>${esc(c.name)}</h2><p><b>Código:</b> ${esc(c.code||'S/C')} · <b>Giro:</b> ${esc(c.giro)} · <b>Cobertura:</b> ${c.coverage||0}%</p><h3>Categorías activas</h3><div class="chips">${(c.activeCategories||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join('')||'<span class="small">Sin categorías activas.</span>'}</div><h3>Categorías perdidas</h3><div class="chips">${(c.lostCategories||[]).map(x=>`<span class="chip lost">${esc(x)}</span>`).join('')||'<span class="small">Sin categorías perdidas.</span>'}</div>`;document.getElementById('activeProducts').innerHTML=prodList(c.activeProducts||[],'Histórico');document.getElementById('lostProducts').innerHTML=prodList(c.lostProducts||[],'Recuperado')}
-function cacheProd(p){let id='p'+(++prodSeq);prodCache[id]=p;return id}function prodList(list,type){return list.map(p=>{let id=cacheProd(p);return `<div class="prod"><div><b>${esc(p.code||'S/C')}</b><small>${esc(p.category)}</small></div><div>${esc(p.desc)}</div><div><input id="q_${id}" type="number" min="1" value="1"></div><button class="btn" onclick="addOrderId('${id}','${type}')">Agregar</button></div>`}).join('')||'<div class="note">Sin productos.</div>'}
-function addOrderId(id,type){let p=prodCache[id];let q=Number(document.getElementById('q_'+id)?.value||1);addOrder(p,type,q)}
-function selectOrderClient(){let v=document.getElementById('orderClient').value;currentClient=v===''?DB.clients[0]:DB.clients[+v];document.getElementById('orderActive').innerHTML=prodList(currentClient.activeProducts||[],'Histórico');document.getElementById('orderLost').innerHTML=prodList(currentClient.lostProducts||[],'Recuperado');renderOrder()}
-function addOrder(p,type,qty=1){if(!p)return;let key=p.code||p.desc;let ex=order.find(i=>(i.code||i.desc)===key);if(ex)ex.qty+=qty;else order.push({code:p.code||'',desc:p.desc||'',category:p.category||'SIN CATEGORIA',qty,type});renderOrder();toast('Producto agregado')}
-function renderOrder(){let c=currentClient||{};document.getElementById('orderHeader').innerHTML=`<div class="orderMeta"><div><b>Cliente</b>${esc(c.name||'')}</div><div><b>Código cliente</b>${esc(c.code||'S/C')}</div><div><b>Atendió</b>${esc(document.getElementById('user').value)}</div><div><b>Total piezas</b>${order.reduce((a,b)=>a+b.qty,0)}</div></div>`;let list=document.getElementById('orderLines');if(!order.length){list.innerHTML='<div class="note">Sin productos capturados todavía.</div>';return}list.innerHTML='<div class="orderHead"><span>Código de producto</span><span>Descripción del producto</span><span>Cantidad</span><span class="orderActionHead" aria-hidden="true"></span></div>'+order.map((i,idx)=>`<div class="orderLine"><b class="orderCode">${esc(i.code||'S/C')}</b><span class="orderDescription">${esc(i.desc)}</span><span class="qty">${i.qty}</span><button class="removeIcon" type="button" title="Quitar producto" aria-label="Quitar ${esc(i.desc)}" onclick="removeOrder(${idx})">×</button></div>`).join('')}
-function removeOrder(idx){order.splice(idx,1);renderOrder()}function clearOrder(){order=[];renderOrder()}function sapLines(){return order.map(i=>`${i.code}\t${i.desc}\t${i.qty}`).join('\n')}function fullOrderText(){let c=currentClient||{},com=document.getElementById('comments').value.trim();let lines=[`CLIENTE: ${c.name||''}`,`CÓDIGO CLIENTE: ${c.code||'S/C'}`,`ATENDIÓ: ${document.getElementById('user').value}`,'','CÓDIGO DE PRODUCTO | DESCRIPCIÓN DEL PRODUCTO | CANTIDAD'];order.forEach(i=>lines.push(`${i.code||'S/C'} | ${i.desc} | ${i.qty}`));lines.push('',`TOTAL PRODUCTOS: ${order.length}`,`TOTAL PIEZAS: ${order.reduce((a,b)=>a+b.qty,0)}`);if(com)lines.push('',`COMENTARIOS: ${com}`);return lines.join('\n')}
-function copyText(txt,msg){if(!txt.trim())return alert('No hay productos para copiar');if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(()=>toast(msg)).catch(()=>fallbackCopy(txt,msg))}else fallbackCopy(txt,msg)}function fallbackCopy(txt,msg){let t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);toast(msg)}function copySAP(){copyText(sapLines(),'Productos copiados para SAP')}function copyFullOrder(){copyText(fullOrderText(),'Pedido completo copiado')}
-async function saveOrder(){if(!order.length)return alert('Agrega productos primero');let payload={date:new Date().toLocaleString(),user:document.getElementById('user').value,client:currentClient.name,code:currentClient.code,comments:document.getElementById('comments').value,items:order.map(x=>({...x}))};if(HAS_SUPA){const {data,error}=await supa.from('orders').insert({client_code:payload.code,client_name:payload.client,attended_by:payload.user,comments:payload.comments,order_status:'capturado'}).select().single();if(!error&&data){await supa.from('order_items').insert(payload.items.map(i=>({order_id:data.id,product_code:i.code,product_desc:i.desc,category:i.category,qty:i.qty,item_type:i.type})))}}else{saved.push(payload);localStorage.setItem('atn_orders_v1',JSON.stringify(saved))}await loadOrders();toast('Pedido guardado');clearOrder();renderFollow()}
-function mailHref(toList,subject,body){return 'mailto:'+toList.join(';')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body)}function sendMail(){location.href=mailHref([], 'Pedido '+(currentClient?.name||''), fullOrderText())}function sendBranch(branch){if(!order.length)return alert('Agrega productos primero');location.href=mailHref((CONFIG.branchEmails||{})[branch]||[], 'Pedido '+branch+' - '+(currentClient?.name||''), fullOrderText())}function sendWA(){window.open('https://wa.me/?text='+encodeURIComponent('📦 PEDIDO TOYO FOODS\n\n'+fullOrderText()),'_blank')}
-function openCatalog(){document.getElementById('catalogModal').classList.add('show');renderCatalog()}function closeCatalog(){document.getElementById('catalogModal').classList.remove('show')}function renderCatalog(){let q=(document.getElementById('catalogSearch').value||'').toUpperCase(),cat=document.getElementById('catalogCat').value;let rows=DB.catalog.filter(p=>(!q||(p.code||'').includes(q)||(p.desc||'').includes(q))&&(!cat||p.category===cat)).slice(0,250);document.getElementById('catalogList').innerHTML=rows.map(p=>{let id=cacheProd(p);return `<div class="prod"><div><b>${esc(p.code||'S/C')}</b><small>${esc(p.category)}</small></div><div>${esc(p.desc)}</div><div><input id="q_${id}" type="number" min="1" value="1"></div><button class="btn" onclick="addOrderId('${id}','Nuevo')">Agregar</button></div>`}).join('')}
-function renderFollow(){let total=saved.length,rec=0,nue=0;saved.forEach(o=>(o.items||[]).forEach(i=>{if(i.type==='Recuperado')rec++;if(i.type==='Nuevo')nue++}));document.getElementById('followKpis').innerHTML=[['Pedidos guardados',total,HAS_SUPA?'Supabase':'Local'],['Productos recuperados',rec,'Tipo recuperado'],['Productos nuevos',nue,'Fuera de historial'],['Usuarios activos',new Set(saved.map(x=>x.user)).size,'Atención a Clientes'],['Piezas capturadas',saved.reduce((a,o)=>a+(o.items||[]).reduce((x,i)=>x+i.qty,0),0),'Total']].map(k=>`<div class="card kpi"><div class="label">${k[0]}</div><div class="num">${k[1]}</div><div class="hint">${k[2]}</div></div>`).join('');document.getElementById('followTable').innerHTML='<tr><th>Fecha</th><th>Usuario</th><th>Cliente</th><th>Productos</th><th>Recuperados</th><th>Nuevos</th><th>Comentarios</th></tr>'+saved.map(o=>`<tr><td>${esc(o.date)}</td><td>${esc(o.user)}</td><td><b>${esc(o.client)}</b><br>${esc(o.code)}</td><td>${(o.items||[]).length}</td><td>${(o.items||[]).filter(i=>i.type==='Recuperado').length}</td><td>${(o.items||[]).filter(i=>i.type==='Nuevo').length}</td><td>${esc(o.comments||'')}</td></tr>`).join('')}
-function exportCSV(){let rows=[['fecha','usuario','cliente','codigo_cliente','codigo_producto','producto','categoria','piezas','tipo','comentarios']];saved.forEach(o=>(o.items||[]).forEach(i=>rows.push([o.date,o.user,o.client,o.code,i.code,i.desc,i.category,i.qty,i.type,o.comments||''])));let csv=rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='seguimiento_atn_clientes.csv';a.click()}
-function renderConfig(){let el=document.getElementById('connectionStatus');if(!el)return;el.innerHTML=HAS_SUPA?'✅ Conectado a Supabase. Los pedidos se guardan en base de datos.':'⚠️ Modo local: usa data_seed.js y localStorage. Configura Supabase en config.js para operación real.'}
-checkAppLogin();
-init().catch(e=>{console.error(e);alert('Error al iniciar: '+e.message)})
+const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s+/g,' ');
+const asNumber=v=>{if(typeof v==='number')return Number.isFinite(v)?v:0;if(v==null||v==='')return 0;const n=Number(String(v).replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0};
+
+function parseDate(v){
+  if(v instanceof Date&&!isNaN(v))return v;
+  if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}
+  const s=String(v??'').trim();if(!s)return null;
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){let y=Number(m[3]);if(y<100)y+=2000;return new Date(y,Number(m[2])-1,Number(m[1]))}
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+function monthLabel(d){return d.toLocaleDateString('es-MX',{month:'long',year:'numeric'})}
+function findColumn(headers,candidates){
+  const nh=headers.map(norm);
+  for(const c of candidates){const i=nh.indexOf(norm(c));if(i>=0)return headers[i]}
+  for(let i=0;i<nh.length;i++){if(candidates.some(c=>nh[i].includes(norm(c))))return headers[i]}
+  return null;
+}
+function handleFile(file){
+  selectedFile=file;fileLabel.textContent=file?file.name:'Arrastra tu archivo aquí';
+  analyzeBtn.disabled=!file;statusBox.textContent='';statusBox.className='status';
+}
+fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.style.borderColor='#2f78b7'});
+dropzone.addEventListener('dragleave',()=>dropzone.style.borderColor='');
+dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.style.borderColor='';const f=e.dataTransfer.files[0];if(f)handleFile(f)});
+
+analyzeBtn.addEventListener('click',async()=>{
+  if(!selectedFile)return;
+  analyzeBtn.disabled=true;statusBox.textContent='Analizando archivo...';
+  try{
+    const buf=await selectedFile.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:null,raw:true});
+    if(!rows.length)throw new Error('El archivo no contiene registros.');
+    const headers=Object.keys(rows[0]);
+    const cols={
+      date:findColumn(headers,['FECHA DE CONTABILIZACION','FECHA CONTABILIZACION','FECHA']),
+      client:findColumn(headers,['NOMBRE DE CLIENTE','CLIENTE']),
+      code:findColumn(headers,['CODIGO DE PRODUCTO','CODIGO PRODUCTO','CÓDIGO DE PRODUCTO']),
+      desc:findColumn(headers,['DESCRIPCION DE PRODUCTO','DESCRIPCIÓN DE PRODUCTO','PRODUCTO']),
+      pieces:findColumn(headers,['TOTAL DE PIEZAS','PIEZAS']),
+      subtotal:findColumn(headers,['SUBTOTAL'])
+    };
+    const missing=Object.entries(cols).filter(([,v])=>!v).map(([k])=>k);
+    if(missing.length)throw new Error('No pude identificar estas columnas: '+missing.join(', '));
+
+    const valid=rows.map(r=>({r,d:parseDate(r[cols.date])})).filter(x=>x.d);
+    if(!valid.length)throw new Error('No pude leer fechas válidas.');
+
+    const maxDate=new Date(Math.max(...valid.map(x=>x.d.getTime())));
+    const currentStart=new Date(maxDate.getFullYear(),maxDate.getMonth(),1);
+    const prevStart=new Date(maxDate.getFullYear(),maxDate.getMonth()-1,1);
+    const prevEnd=new Date(maxDate.getFullYear(),maxDate.getMonth(),0,23,59,59);
+
+    const clients={},products={};let currentTotal=0,prevTotal=0;
+    for(const {r,d} of valid){
+      const subtotal=asNumber(r[cols.subtotal]),pieces=asNumber(r[cols.pieces]);
+      const client=String(r[cols.client]??'').trim(),code=String(r[cols.code]??'').trim(),desc=String(r[cols.desc]??'').trim();
+      const isCurrent=d>=currentStart&&d<=maxDate,isPrev=d>=prevStart&&d<=prevEnd;
+      if(!isCurrent&&!isPrev)continue;
+      if(isCurrent)currentTotal+=subtotal;if(isPrev)prevTotal+=subtotal;
+      if(client){clients[client]??={current:0,prev:0};if(isCurrent)clients[client].current+=subtotal;if(isPrev)clients[client].prev+=subtotal}
+      if(code){products[code]??={desc,currentMoney:0,prevMoney:0,currentPieces:0,prevPieces:0};if(!products[code].desc&&desc)products[code].desc=desc;if(isCurrent){products[code].currentMoney+=subtotal;products[code].currentPieces+=pieces}if(isPrev){products[code].prevMoney+=subtotal;products[code].prevPieces+=pieces}}
+    }
+    const topClients=Object.entries(clients).filter(([,v])=>v.current>0).sort((a,b)=>b[1].current-a[1].current).slice(0,5).map(([name,v])=>({name,value:v.current}));
+    const lostClients=Object.entries(clients).filter(([,v])=>v.prev>0&&v.current===0).sort((a,b)=>b[1].prev-a[1].prev).map(([name,v])=>({name,prev:v.prev,current:v.current}));
+    const lostProducts=Object.entries(products).filter(([,v])=>v.prevMoney>0&&v.currentMoney===0).sort((a,b)=>b[1].prevMoney-a[1].prevMoney).map(([code,v])=>({code,desc:v.desc,prevPieces:v.prevPieces,prevMoney:v.prevMoney}));
+    const summary={fileName:selectedFile.name,maxDate:maxDate.toISOString(),labels:{current:monthLabel(maxDate),prev:monthLabel(prevStart)},totals:{current:currentTotal,prev:prevTotal,meta:asNumber(metaInput.value)},topClients,lostClients,lostProducts,products};
+    localStorage.setItem('toyoPremiumData',JSON.stringify(summary));
+    location.href='dashboard.html';
+  }catch(err){
+    console.error(err);statusBox.textContent=err.message||'No fue posible analizar el archivo.';statusBox.className='status error';analyzeBtn.disabled=false;
+  }
+});

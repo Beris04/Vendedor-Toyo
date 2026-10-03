@@ -1,39 +1,25 @@
-# ATN Clientes 1.0 - Toyo Foods
+# Toyo Foods - Sales Intelligence
 
-Proyecto reconstruido desde cero con arquitectura estable.
+Versión diseñada para GitHub Pages.
 
-## Archivos principales
-- `index.html`: aplicación web.
-- `styles.css`: diseño institucional.
-- `app.js`: lógica modular.
-- `config.js`: conexión Supabase y correos por sucursal.
-- `data_seed.js`: base inicial para trabajar sin Supabase.
-- `sql/supabase_schema.sql`: tablas y vistas para Supabase.
-- `tools/import_monthly_data.py`: plantilla para importación mensual.
+## Publicación
+1. Crea un repositorio en GitHub.
+2. Sube a la raíz:
+   - index.html
+   - dashboard.html
+   - styles.css
+   - app.js
+   - dashboard.js
+3. Ve a Settings > Pages.
+4. Source: Deploy from a branch.
+5. Branch: main.
+6. Folder: /(root).
+7. Guarda.
 
-## Uso rápido en GitHub Pages
-Sube al repositorio estos archivos:
-- `index.html`
-- `styles.css`
-- `app.js`
-- `config.js`
-- `data_seed.js`
-
-La app funciona en modo local aunque Supabase no esté configurado.
-
-## Para operar con Supabase
-1. Crea proyecto en Supabase.
-2. Ejecuta `sql/supabase_schema.sql` en SQL Editor.
-3. Copia URL y Anon Key a `config.js`.
-4. Después los pedidos se guardarán en Supabase.
-
-## Actualización mensual
-La idea es no rehacer el HTML. Cada mes se importan ventas nuevas a `ventas_historial`, se actualizan clientes/productos si hay cambios, y los dashboards se recalculan.
-
-
-## Conexión configurada
-
-Este paquete ya incluye la URL y Anon Key de Supabase en `config.js`.
-
-Para que guarde pedidos en Supabase, primero ejecuta `sql/supabase_schema.sql` en Supabase SQL Editor.
-
+## Funcionamiento
+- El vendedor carga el archivo SAP.
+- Captura la meta.
+- La app calcula venta actual, mes anterior, avance, faltante, Top 5, clientes sin compra y productos sin venta.
+- Visitas, pendientes, promociones, notas y foto son editables.
+- La información manual se guarda en localStorage del navegador.
+- El archivo SAP se procesa localmente en el navegador.
